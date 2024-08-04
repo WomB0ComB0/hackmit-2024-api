@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Scraper from "../classes/scraper";
 
 class ScraperController {
-  private readonly scraper: Scraper;
+  private scraper: Scraper;
   constructor() {
     this.scraper = new Scraper();
     this.initializeScraper();

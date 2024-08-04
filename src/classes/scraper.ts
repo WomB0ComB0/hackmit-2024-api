@@ -1,10 +1,10 @@
 import puppeteer from "puppeteer-extra";
 import { LaunchOptions } from "puppeteer";
-import { promisify } from "util";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
+// import StealthPlugin from "puppeteer-extra-plugin-stealth";
+// import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
+
 
 interface Row {
   text: string;
@@ -102,8 +102,6 @@ const removeDuplicates = (text: string): string => {
 
 const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 
-const readFileAsync = promisify(fs.readFile);
-
 class Scraper {
   private cachedData: Row[] | null = null;
   private cachedNewWords: Row[] | null = null;
@@ -114,8 +112,8 @@ class Scraper {
   private cachedNSFW: string[] | null = null;
 
   constructor() {
-    puppeteer.use(StealthPlugin());
-    puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
+    // puppeteer.use(StealthPlugin());
+    // puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
   }
 
   public async initialize(): Promise<void> {
@@ -167,7 +165,7 @@ class Scraper {
 
   private async parseTXT(filePath: string): Promise<Row[]> {
     try {
-      const data = await readFileAsync(filePath, "utf8");
+      const data = await fs.readFile(filePath, "utf8");
       return data
         .split("\n")
         .filter((line) => line.trim())
