@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Hono, MiddlewareHandler } from "hono";
-import Scraper from '../src/classes/scraper'
+import { scrape, initializeFilterWords } from '../src/scraper'
+
 
 
 describe("API", () => {
@@ -15,9 +16,9 @@ describe("API", () => {
     if (!url) {
       return c.json({ message: "URL query parameter is required" });
     }
-    const scraper = new Scraper();
-    await scraper.scrape(url);
-    return c.json({ message: "Scraping completed" });
+    await initializeFilterWords();
+    const result = await scrape(url);
+    return c.json(result);
   });
 
   it("GET /api", async () => {
