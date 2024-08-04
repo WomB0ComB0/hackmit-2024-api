@@ -3,20 +3,19 @@ import { rateLimit, RateLimitRequestHandler } from 'express-rate-limit'
 import { errorHandler } from './middlewares'
 import ScraperRouter from "./routes/ScraperRouter";
 
-
-
 class App {
   public app: Application;
 
   constructor() {    
     this.app = express();
+    this.app.set('trust proxy', true);
     this.plugins();
     this.routes();
   }
 
   private readonly limiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000,
-	  limit: 100,
+    limit: 100,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
   });
