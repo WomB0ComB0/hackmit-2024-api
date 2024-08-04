@@ -1,0 +1,39 @@
+{
+  "name": "sparkmind-scraper-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "lint": "bunx biome check --write ./"
+  },
+  "keywords": [],
+  "author": "Mike Odnis",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@hono/sentry": "^1.2.0",
+    "@hono/swagger-ui": "^0.4.0",
+    "@hono/zod-openapi": "^0.15.1",
+    "@hono/zod-validator": "^0.2.2",
+    "@t3-oss/env-core": "^0.11.0",
+    "@types/node": "^22.1.0",
+    "@types/puppeteer": "^7.0.4",
+    "hono": "^4.5.3",
+    "puppeteer": "^22.15.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-adblocker": "^2.13.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "supertest": "^7.0.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@cloudflare/workers-types": "^4.20240729.0",
+    "wrangler": "^3.68.0"
+  }
+}
