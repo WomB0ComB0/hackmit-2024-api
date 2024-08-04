@@ -8,9 +8,6 @@
     "noUnusedLocals": false,
     "lib": ["ESNext", "DOM"],
     "types": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext",
       "@cloudflare/workers-types",
       "node"
     ],
@@ -18,7 +15,8 @@
     "jsxImportSource": "hono/jsx",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "outDir": "./dist"
   },
   "include": ["src/**/*.ts", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist"]

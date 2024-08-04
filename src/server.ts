@@ -12,7 +12,7 @@ export type Variables = Record<string, never>;
 class App {
   public app = new Hono<{
     Bindings: Bindings;
-    Variables: Record<string, never>;
+    Variables: Variables;
   }>();
 
   constructor() {

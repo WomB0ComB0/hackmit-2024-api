@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer-extra";
 import { LaunchOptions } from "puppeteer";
-import fs from "fs/promises";
+import { promisify } from "util";
+import fs from "fs";
 import path from "path";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
@@ -101,6 +102,8 @@ const removeDuplicates = (text: string): string => {
 
 const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 
+const readFileAsync = promisify(fs.readFile);
+
 class Scraper {
   private cachedData: Row[] | null = null;
   private cachedNewWords: Row[] | null = null;
@@ -164,7 +167,7 @@ class Scraper {
 
   private async parseTXT(filePath: string): Promise<Row[]> {
     try {
-      const data = await fs.readFile(filePath, "utf8");
+      const data = await readFileAsync(filePath, "utf8");
       return data
         .split("\n")
         .filter((line) => line.trim())
@@ -262,11 +265,9 @@ class Scraper {
       }
 
       const texts = await page.evaluate(() => {
-        const elements: Element[] = [
-          ...document.querySelectorAll(
-            "p, div, span, a, h1, h2, h3, h4, h5, h6, li",
-          ),
-        ];
+        const elements: Element[] = Array.from(
+          document.querySelectorAll("p, div, span, a, h1, h2, h3, h4, h5, h6, li")
+        );
         let filteredElements: string[] = elements
           .map((el) => el.textContent?.trim() || "")
           .filter((text) => text.length > 0);
