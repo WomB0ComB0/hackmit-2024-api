@@ -1,8 +1,10 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-extra";
 import { LaunchOptions } from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "node:url";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
 
 interface Row {
   text: string;
@@ -171,8 +173,9 @@ const scrape = async (url: Readonly<string>): Promise<{
   containsCensored: boolean;
   filteredTexts: string[];
 }> => {
-  const filePath = path.join(__dirname, "..", "data", "nsfw.txt");
 
+  const filePath = path.join(__dirname, "..", "data", "nsfw.txt");
+  
   try {
     if (!cachedNSFW) {
       try {
@@ -204,6 +207,10 @@ const scrape = async (url: Readonly<string>): Promise<{
 
     let browser;
     try {
+      puppeteer.use(StealthPlugin());
+      puppeteer.use(AdblockerPlugin({
+        blockTrackers: true,
+      }));
       browser = await puppeteer.launch(<LaunchOptions>{
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
