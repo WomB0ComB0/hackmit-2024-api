@@ -1,51 +1,63 @@
-import { Hono } from "hono";
-import { swaggerUI } from "@hono/swagger-ui";
-import { sentry } from "@hono/sentry";
-import Scraper from "./scraper";
+import "./instrument";
 
-export type Bindings = {
-  [key in keyof CloudflareBindings]: CloudflareBindings[key];
-};
+import express, { type Application, type NextFunction, type Request, type Response } from 'express'
+import { rateLimit, RateLimitRequestHandler } from 'express-rate-limit'
+import * as Sentry from "@sentry/node";
+import { errorHandler } from './middlewares'
+import { join } from "path";
+import ScraperRouter from "./routes/ScraperRouter";
 
-export type Variables = Record<string, never>;
+
 
 class App {
-  public app = new Hono<{
-    Bindings: Bindings;
-    Variables: Variables;
-  }>();
+  public app: Application;
 
-  constructor() {
-    this.app.basePath("/api/v1");
+  constructor() {    
+    this.app = express();
+    this.plugins();
+    this.routes();
+    this.app.use(Sentry.expressErrorHandler());
+  }
 
-    this.app.get("/", swaggerUI({ url: "/doc" }));
+  private readonly path: string = join(__dirname, '..', 'static');
 
-    this.app.get("/scrape", async (ctx) => {
-      const url: string = ctx.req.query("url") ?? "";
-      if (!url) {
-        return ctx.json({ message: "URL query parameter is required" });
-      }
+  private readonly limiter: RateLimitRequestHandler = rateLimit({
+    windowMs: 15 * 60 * 1000,
+	  limit: 100,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+  });
 
-      try {
-        const scraper = new Scraper();
-        await scraper.scrape(url);
-        return ctx.json({ message: "Scraping compelted" });
-      } catch (error) {
-        return ctx.json({ message: `${error}`, status: `${ctx.status(500)}` });
-      }
+  protected routes (): void {
+    this.app.use('/', this.limiter, express.static(this.path));
+    this.app.use('/api/v1/scrape', this.limiter, ScraperRouter)
+    this.app.use(errorHandler)
+  }
+
+  protected plugins (): void {
+    this.app.use(Sentry.expressErrorHandler());
+    this.app.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
+    this.app.options('/api/v1/scrape', (_req: Request, res: Response) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.status(200).send('ok');
     });
 
-    this.app.get("/ui", swaggerUI({ url: "/doc" }));
-
-    this.app.use(
-      "*",
-      sentry({
-        dsn: "https://b9aacde06ec3352f373c1a7a2ce32fd3@o4506762839916544.ingest.us.sentry.io/4507716661018624",
-      }),
-    );
+    this.app.use((_req: Request, res: Response, next: NextFunction) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      next();
+    });
   }
 }
 
-const api = new App();
+const port: number = 3000;
 
-export default api;
+export const api = new App().app;
+
+api.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});

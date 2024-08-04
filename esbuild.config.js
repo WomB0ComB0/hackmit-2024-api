@@ -1,5 +1,4 @@
 const { build } = require('esbuild');
-const { nodeExternals } = require('esbuild-node-externals');
 
 build({
   entryPoints: ['src/server.ts'],
@@ -7,5 +6,5 @@ build({
   platform: 'node',
   target: 'node22',
   outdir: 'dist',
-  external: [nodeExternals()],
+  external: ["fs/promises", "path", "url"],
 }).catch(() => process.exit(1));
