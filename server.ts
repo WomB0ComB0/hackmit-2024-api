@@ -12,7 +12,7 @@ const root: string = process.cwd();
 const resolve = (_path: string) => path.resolve(__dirname, _path);
 
 const indexProd: string = isProd
-    ? fs.readFileSync(resolve('client/index.html'), 'utf-8')
+    ? fs.readFileSync(resolve('index.html'), 'utf-8')
     : ''
 
 const createServer = async () => {
