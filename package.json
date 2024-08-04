@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch server --watch server.ts --exec tsx server.ts",
+    "start": "cross-env NODE_ENV=production bun server.ts",
     "build": "npm run clean && npm run build:client && npm run build:server",
     "lint": "bunx biome check --write ./",
     "preview": "vite preview",
@@ -27,6 +28,7 @@
   "description": "",
   "dependencies": {
     "@types/serve-static": "^1.15.7",
+    "cross-env": "^7.0.3",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "puppeteer": "^22.15.0",
