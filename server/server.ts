@@ -22,8 +22,12 @@ class App {
 
   protected routes (): void {
     this.app.use('/scrape', this.limiter, ScraperRouter)
+    this.app.get('/health', (_req: Request, res: Response) => {
+      res.status(200).send('ok');
+    })
     this.app.use(errorHandler)
   }
+
 
   protected plugins (): void {
     this.app.use(express.json());

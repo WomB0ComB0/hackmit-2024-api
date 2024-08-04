@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { api } from './server/server.js';
+import http from 'node:http';
 
 const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 const isTest = process.env.VITEST;
@@ -88,6 +89,16 @@ const createServer = async () => {
             res.status(500).end(e.stack)
         }
     })
+
+
+    setInterval(() => {
+        http.get('https://sparkmind-scraper-api.onrender.com/health', (res) => {
+            res.on('data', () => {});
+            res.on('end', () => {});
+        }).on('error', (err) => {
+            throw new Error('Error pinging server:', err);
+        });
+    }, 10 * 60 * 1000);
 
     return { app, vite }
 }
