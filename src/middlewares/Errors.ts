@@ -16,5 +16,5 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
   }
 
   console.error(JSON.stringify(err, null, 2));
-  return res.status(500).json({ errors: [{ message: "Something went wrong" }] });
+  return res.status(500).json({ errors: [{ message: `Something went wrong at <errorHandler in Errors.ts>. ${err}` }] });
 };

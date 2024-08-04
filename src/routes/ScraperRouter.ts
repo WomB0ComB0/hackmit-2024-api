@@ -17,10 +17,11 @@ class ScraperRouter extends BaseRoutes {
       if (this.scraperController) {
         this.router.get("/", asyncHandler(this.scraperController.scrape));
       } else {
-        throw new Error("⚠️ Unable to initialize ScraperController");
+        throw new Error(`⚠️ Unable to initialize ScraperController at <ScraperRouter.routes>.`);
       }
     } catch (error) {
-      console.error("⚠️ Unable to initialize ScraperRouter", error);
+      console.error(`⚠️ Unable to initialize ScraperRouter at <ScraperRouter.routes>. ${error}`);
+      throw new Error(`⚠️ Unable to initialize ScraperRouter at <ScraperRouter.routes>. ${error}`);
     }
   }
 }

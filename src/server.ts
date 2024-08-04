@@ -1,8 +1,8 @@
-import "./instrument";
+// import "./instrument";
 
 import express, { type Application, type NextFunction, type Request, type Response } from 'express'
 import { rateLimit, RateLimitRequestHandler } from 'express-rate-limit'
-import * as Sentry from "@sentry/node";
+// import { expressErrorHandler } from "@sentry/node";
 import { errorHandler } from './middlewares'
 import { join } from "path";
 import ScraperRouter from "./routes/ScraperRouter";
@@ -16,7 +16,7 @@ class App {
     this.app = express();
     this.plugins();
     this.routes();
-    this.app.use(Sentry.expressErrorHandler());
+    // this.app.use(expressErrorHandler());
   }
 
   private readonly path: string = join(__dirname, '..', 'static');
@@ -35,7 +35,7 @@ class App {
   }
 
   protected plugins (): void {
-    this.app.use(Sentry.expressErrorHandler());
+    // this.app.use(expressErrorHandler());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.options('/api/v1/scrape', (_req: Request, res: Response) => {

@@ -129,8 +129,8 @@ class Scraper {
   }
 
   private async initializeFilterWords(): Promise<void> {
-    const filePath = path.join(__dirname, "data", "slurs.txt");
-    const nsfwFilePath = path.join(__dirname, "data", "nsfw-names.txt");
+    const filePath = path.join(__dirname, "..", "data", "slurs.txt");
+    const nsfwFilePath = path.join(__dirname, "..", "data", "nsfw-names.txt");
 
     if (!this.cachedData?.length) {
       try {
@@ -185,11 +185,6 @@ class Scraper {
         const word = words[i];
         if (this.filterDict!.has(word) || this.filterTrie!.search(word)) {
           words[i] = replace;
-        } else if (
-          this.newWordsDict!.has(word) ||
-          this.newWordsTree!.startsWith(word)
-        ) {
-          words[i] = replace;
         }
       }
       return words.join(" ");
@@ -203,7 +198,7 @@ class Scraper {
     containsCensored: boolean;
     filteredTexts: string[];
   }> {
-    const filePath = path.join(__dirname, "data", "nsfw.txt");
+    const filePath = path.join(__dirname, "..", "data", "nsfw.txt");
 
     try {
       if (!this.cachedNSFW) {
