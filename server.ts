@@ -2,23 +2,34 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import * as Sentry from '@sentry/node';
 import { api } from './server/server.js';
 import http from 'node:http';
 
 const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 const isTest = process.env.VITEST;
-const isProd = process.env.NODE_ENV === 'production'
+const isProd = process.env.NODE_ENV === 'production';
 const root: string = process.cwd();
 
 const resolve = (_path: string) => path.resolve(__dirname, _path);
 
 const indexProd: string = isProd
     ? fs.readFileSync(resolve('index.html'), 'utf-8')
-    : ''
+    : '';
 
 const createServer = async () => {
-
     const app = express();
+    
+    Sentry.init({
+        dsn: "https://b9aacde06ec3352f373c1a7a2ce32fd3@o4506762839916544.ingest.us.sentry.io/4507716661018624",
+        integrations: [
+            nodeProfilingIntegration(),
+        ],
+        tracesSampleRate: 1.0,
+        profilesSampleRate: 1.0,
+    });
+
 
     let vite: any;
 
@@ -34,34 +45,33 @@ const createServer = async () => {
                 }
             },
             appType: "custom"
-        })
+        });
 
-        app.use(vite.middlewares)
+        app.use(vite.middlewares);
     }
 
     if (isProd) {
-        app.use((await import('compression')).default())
+        app.use((await import('compression')).default());
 
         app.use(
             (await import('serve-static')).default(resolve('./client'), {
                 index: false
             })
-        )
+        );
     }
 
     // api routes
-    app.use('/api', api)
+    app.use('/api', api);
 
     app.use('*', async (req, res) => {
         try {
-
             const url = req.originalUrl;
 
             let template, render;
 
             if (!isProd) {
-                template = fs.readFileSync(resolve('index.html'), 'utf8')
-                template = await vite.transformIndexHtml(url, template)
+                template = fs.readFileSync(resolve('index.html'), 'utf8');
+                template = await vite.transformIndexHtml(url, template);
 
                 render = (await vite.ssrLoadModule('/src/entry-server.tsx')).default.render;
             }
@@ -75,21 +85,19 @@ const createServer = async () => {
             }
 
             const context: any = {};
-            const appHtml = render(url, context)
+            const appHtml = render(url, context);
 
             if (context.url) return res.redirect(301, context.url);
 
-            const html = template.replace('<!--app-html-->', appHtml.html)
+            const html = template.replace('<!--app-html-->', appHtml.html);
 
-            res.status(200).set({ "Content-Type": "text/html" }).end(html)
-
+            res.status(200).set({ "Content-Type": "text/html" }).end(html);
         } catch (e: any) {
-            !isProd && vite.ssrFixStacktrace(e)
-            console.log(e.stack)
-            res.status(500).end(e.stack)
+            !isProd && vite.ssrFixStacktrace(e);
+            console.log(e.stack);
+            res.status(500).end(e.stack);
         }
-    })
-
+    });
 
     setInterval(() => {
         http.get('https://sparkmind-scraper-api.onrender.com/health', (res) => {
@@ -100,13 +108,15 @@ const createServer = async () => {
         });
     }, 10 * 60 * 1000);
 
-    return { app, vite }
-}
+    Sentry.setupExpressErrorHandler(app);
+
+    return { app, vite };
+};
 
 if (!isTest) {
     createServer().then(({ app }) => {
         app.listen(process.env.PORT || 3000, () => {
             console.log(`Server running on http://localhost:${process.env.PORT || 3000}`);
-        })
-    })
+        });
+    });
 }

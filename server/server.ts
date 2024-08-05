@@ -24,8 +24,8 @@ class App {
     this.app.use('/scrape', this.limiter, ScraperRouter)
     this.app.get('/health', (_req: Request, res: Response) => {
       res.status(200).send('ok');
-    })
-    this.app.use(errorHandler)
+    });
+    this.app.use(errorHandler);
   }
 
 
@@ -47,7 +47,5 @@ class App {
     });
   }
 }
-
-const port: number = 3000;
 
 export const api = new App().app;

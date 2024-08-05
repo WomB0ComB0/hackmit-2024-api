@@ -28,6 +28,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sentry/node": "^8.22.0",
+    "@sentry/profiling-node": "^8.22.0",
     "@types/serve-static": "^1.15.7",
     "cross-env": "^7.0.3",
     "express": "^4.19.2",
