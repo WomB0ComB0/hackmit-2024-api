@@ -17,7 +17,7 @@ class App {
     limit: 100,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    validate: { trustProxy: false }
+    validate: { xForwardedForHeader: false }
   });
 
   protected routes (): void {
