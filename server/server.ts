@@ -8,7 +8,6 @@ class App {
 
   constructor() {    
     this.app = express();
-    this.app.set('trust proxy', true);
     this.plugins();
     this.routes();
   }
@@ -18,6 +17,7 @@ class App {
     limit: 100,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    validate: { trustProxy: false }
   });
 
   protected routes (): void {
