@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
-import * as Sentry from '@sentry/node';
+// import { nodeProfilingIntegration } from '@sentry/profiling-node';
+// import * as Sentry from '@sentry/node';
 import { api } from './server/server.js';
 import http from 'node:http';
 
@@ -21,14 +21,14 @@ const indexProd: string = isProd
 const createServer = async () => {
     const app = express();
     
-    Sentry.init({
-        dsn: "https://b9aacde06ec3352f373c1a7a2ce32fd3@o4506762839916544.ingest.us.sentry.io/4507716661018624",
-        integrations: [
-            nodeProfilingIntegration(),
-        ],
-        tracesSampleRate: 1.0,
-        profilesSampleRate: 1.0,
-    });
+    // Sentry.init({
+    //     dsn: "https://b9aacde06ec3352f373c1a7a2ce32fd3@o4506762839916544.ingest.us.sentry.io/4507716661018624",
+    //     integrations: [
+    //         nodeProfilingIntegration(),
+    //     ],
+    //     tracesSampleRate: 1.0,
+    //     profilesSampleRate: 1.0,
+    // });
 
 
     let vite: any;
@@ -108,7 +108,7 @@ const createServer = async () => {
         });
     }, 10 * 60 * 1000);
 
-    Sentry.setupExpressErrorHandler(app);
+    // Sentry.setupExpressErrorHandler(app);
 
     return { app, vite };
 };
