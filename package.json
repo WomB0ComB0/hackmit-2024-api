@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch server --watch server.ts --exec tsx server.ts",
-    "start": "bun run start:pre && cross-env NODE_ENV=production bun server.ts",
-    "start:pre": "bunx puppeteer browsers install chrome",
+    "start": "npm run start:pre && cross-env NODE_ENV=production tsx server.ts",
+    "start:pre": "npx puppeteer browsers install chrome",
     "build": "npm run clean && npm run build:client && npm run build:server",
-    "lint": "bunx biome check --write ./",
+    "lint": "npx biome check --write ./",
     "preview": "vite preview",
     "build:client": "vite build --outDir dist/app/client",
     "build:server": "tsc -p tsconfig.server.json && vite build --ssr src/entry-server.tsx --outDir dist/entry",
