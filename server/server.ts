@@ -20,13 +20,13 @@ class App {
     validate: { xForwardedForHeader: false }
   });
 
-  protected routes (): void {
-    this.app.use('/scrape', this.limiter, ScraperRouter)
+protected routes (): void {
+    this.app.use('/scrape', this.limiter, ScraperRouter);
     this.app.get('/health', (_req: Request, res: Response) => {
       res.status(200).send('ok');
     });
     this.app.use(errorHandler);
-  }
+}
 
 
   protected plugins (): void {
@@ -48,4 +48,8 @@ class App {
   }
 }
 
-export const api = new App().app;
+const api = new App().app;
+
+api.listen(3000, () => {
+  console.log('Server is running on port 3000');
+});

@@ -1,18 +1,13 @@
 {
   "name": "sparkmind-scraper-api",
   "version": "1.0.0",
-  "type": "module",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --watch server --watch server.ts --exec tsx server.ts",
-    "start": "npm run start:pre && cross-env NODE_ENV=production npx tsx server.ts",
-    "start:pre": "npx puppeteer browsers install chrome",
-    "build": "npm run clean && npm run build:client && npm run build:server",
-    "lint": "npx biome check --write ./",
-    "preview": "vite preview",
-    "build:client": "vite build --outDir dist/app/client",
-    "build:server": "tsc -p tsconfig.server.json && vite build --ssr src/entry-server.tsx --outDir dist/entry",
-    "clean": "rimraf dist",
-    "serve": "cross-env NODE_ENV=production node ./dist/app/server",
+    "start": "nodemon --exec ts-node dist/server.js",
+    "build": "rimraf dist && tsc && cpx 'server/data/**/*.txt' dist/data",
+    "dev": "nodemon --exec ts-node server/server.ts",
+    "eslint": "eslint . --fix --ext  .ts",
+    "prettier": "prettier --write --config .prettierrc.json \"server/**/*.ts\"",
     "test": "vitest",
     "test:watch": "vitest --watch"
   },
@@ -31,6 +26,7 @@
     "@sentry/node": "^8.22.0",
     "@sentry/profiling-node": "^8.22.0",
     "@types/serve-static": "^1.15.7",
+    "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
@@ -42,8 +38,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
     "supertest": "^7.0.0",
-    "zod": "^3.23.8",
-    "compression": "^1.7.4"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
@@ -60,9 +55,10 @@
     "rimraf": "^6.0.1",
     "serve-static": "^1.15.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.16.5",
+    "tsx": "^4.17.0",
     "typescript": "^5.5.4",
     "vite": "^5.3.5",
-    "vitest": "^2.0.5"
+    "vitest": "^2.0.5",
+    "cpx": "^1.5.0"
   }
 }

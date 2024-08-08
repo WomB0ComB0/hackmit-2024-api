@@ -2,7 +2,7 @@ import puppeteer from "puppeteer-extra";
 import { LaunchOptions } from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "node:url";
+// import { fileURLToPath } from "node:url";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
 
@@ -15,8 +15,8 @@ interface TrieNode {
   isEndOfWord: boolean;
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 const createTrieNode = (): TrieNode => ({
   children: {},
