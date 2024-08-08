@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
-    "start": "nodemon --exec ts-node dist/server.js",
+    "start": "bun run start:pre && nodemon --exec ts-node dist/server.js",
+    "start:pre": "bunx puppeteer browsers install chrome",
     "build": "rimraf dist && tsc && cpx 'server/data/**/*.txt' dist/data",
     "dev": "nodemon --exec ts-node server/server.ts",
     "eslint": "eslint . --fix --ext  .ts",
