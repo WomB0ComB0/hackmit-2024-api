@@ -30,6 +30,7 @@
     "cross-env": "^7.0.3",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
+    "nodemon": "^3.1.4",
     "puppeteer": "^22.15.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-adblocker": "^2.13.6",
