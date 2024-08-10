@@ -168,11 +168,36 @@ const filterText = async (text: string, replace: string): Promise<string> => {
   }
 };
 
+const isScrapingAllowed = (robotsText: string, url: string): boolean => {
+  const root = (url.replace(/^https?:\/\/|www\./, '')).split("/")[0]
+  const regex = new RegExp(`User-agent: *\nDisallow: /${root}/`);
+  return !regex.test(robotsText);
+};
+
 const scrape = async (url: Readonly<string>): Promise<{
   flaggedDomain: boolean;
   containsCensored: boolean;
   filteredTexts: string[];
-}> => {
+} | {[key: string] : string}> => {
+
+  const robotsUrl: string = `${(url.replace(/^https?:\/\/|www\./, '')).split("/")[0]}/robots.txt`;
+  try {
+    const response = await fetch(robotsUrl);
+    if (response.ok) {
+      const robotsText = await response.text();
+      if (!isScrapingAllowed(robotsText, url)) {
+        return {
+          error: "Scraping this domain is not allowed",
+        };
+      }
+    } else if (response.status === 404) {
+      return {
+        error: "Robots.txt not found",
+      };
+    }
+  } catch (error) {
+    throw new Error(`Error during <scrape> for <${robotsUrl}>. ${error}`);
+  }
 
   const filePath = path.join(__dirname, "..", "data", "nsfw.txt");
   
@@ -193,9 +218,7 @@ const scrape = async (url: Readonly<string>): Promise<{
       nsfw.includes(url.split("/")[0] === "www" ? url : url.split("/")[2])
     ) {
       return {
-        flaggedDomain: true,
-        containsCensored: false,
-        filteredTexts: [],
+        error: "NSFW domain",
       };
     }
 
@@ -217,7 +240,6 @@ const scrape = async (url: Readonly<string>): Promise<{
         timeout: 0,
       });
     } catch (error) {
-      console.error(`Puppeteer launch error: ${JSON.stringify(error)}`);
       throw new Error(`Error during <puppeteer.launch>. ${error instanceof Error ? error.stack : error}`);
     }
 
@@ -254,9 +276,7 @@ const scrape = async (url: Readonly<string>): Promise<{
         );
       }
       return {
-        flaggedDomain: true,
-        containsCensored: false,
-        filteredTexts: [],
+        error: "NSFW domain",
       };
     }
 
