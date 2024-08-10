@@ -1,2 +1,2 @@
-export * from './BaseRouter'
-export * from './ScraperRouter'
+export * from './BaseRouter';
+export * from './ScraperRouter';

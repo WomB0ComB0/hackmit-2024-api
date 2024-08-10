@@ -1,6 +1,6 @@
+import ScraperController from '../controllers/ScraperController';
 import { asyncHandler } from '../middlewares';
 import BaseRoutes from './BaseRouter';
-import ScraperController from '../controllers/ScraperController';
 
 class ScraperRouter extends BaseRoutes {
   private scraperController: ScraperController | null = null;
@@ -15,7 +15,7 @@ class ScraperRouter extends BaseRoutes {
       this.scraperController = new ScraperController();
 
       if (this.scraperController) {
-        this.router.get("/", asyncHandler(this.scraperController.scrape));
+        this.router.get('/', asyncHandler(this.scraperController.scrape));
       } else {
         throw new Error(`⚠️ Unable to initialize ScraperController at <ScraperRouter.routes>.`);
       }

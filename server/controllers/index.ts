@@ -1,1 +1,1 @@
-export * from './ScraperController'
+export * from './ScraperController';

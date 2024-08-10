@@ -1,10 +1,8 @@
-import puppeteer from "puppeteer-extra";
-import { LaunchOptions } from "puppeteer";
-import fs from "fs/promises";
-import path from "path";
-// import { fileURLToPath } from "node:url";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
+import type { LaunchOptions } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { nsfw, nsfwNames, slurs } from '../data';
 
 interface Row {
   text: string;
@@ -15,9 +13,6 @@ interface TrieNode {
   isEndOfWord: boolean;
 }
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-
 const createTrieNode = (): TrieNode => ({
   children: {},
   isEndOfWord: false,
@@ -26,10 +21,7 @@ const createTrieNode = (): TrieNode => ({
 const insertIntoTrie = (root: TrieNode, word: string): void => {
   let node = root;
   for (const char of word) {
-    if (!node.children[char]) {
-      node.children[char] = createTrieNode();
-    }
-    node = node.children[char];
+    node = node.children[char] = node.children[char] || createTrieNode();
   }
   node.isEndOfWord = true;
 };
@@ -37,60 +29,18 @@ const insertIntoTrie = (root: TrieNode, word: string): void => {
 const searchInTrie = (root: TrieNode, word: string): boolean => {
   let node = root;
   for (const char of word) {
-    if (!node.children[char]) {
-      return false;
-    }
+    if (!node.children[char]) return false;
     node = node.children[char];
   }
   return node.isEndOfWord;
 };
 
-const createHashSet = <T>(arr: T[]): Set<T> => {
-  const hashSet: Set<T> = new Set<T>();
-  const duplicates: T[] = [];
-
-  for (const item of arr) {
-    if (hashSet.has(item)) {
-      duplicates.push(item);
-    } else {
-      hashSet.add(item);
-    }
-  }
-  return hashSet;
-};
-
-const removeInternalDuplicates = (text: string): string => {
-  const segments: RegExpMatchArray = text.match(/[^.!?]+[.!?]+/g) || [text];
-  const uniqueSegments: Set<string> = new Set<string>();
-  const result: string[] = [];
-
-  for (const segment of segments) {
-    if (!uniqueSegments.has(segment)) {
-      uniqueSegments.add(segment);
-      result.push(segment);
-    }
-  }
-
-  return result.join(" ");
-};
-
-const removeExternalDuplicates = (text: string): string => {
-  const segments: RegExpMatchArray = text.match(/[^.!?]+[.!?]+/g) || [text];
-  const uniqueSegments: Set<string> = new Set<string>();
-  const result: string[] = [];
-
-  for (const segment of segments) {
-    if (!uniqueSegments.has(segment)) {
-      uniqueSegments.add(segment);
-      result.push(segment);
-    }
-  }
-
-  return result.join(" ");
-};
+const createHashSet = <T>(arr: T[]): Set<T> => new Set(arr);
 
 const removeDuplicates = (text: string): string => {
-  return removeInternalDuplicates(removeExternalDuplicates(text));
+  const segments: string[] = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const uniqueSegments = Array.from(new Set(segments));
+  return uniqueSegments.join(' ');
 };
 
 const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
@@ -100,237 +50,205 @@ let cachedNewWords: Row[] | null = null;
 let filterTrie: TrieNode | null = null;
 let filterDict: Set<string> | null = null;
 let newWordsTree: TrieNode | null = null;
-let newWordsDict: Set<string> | null = null;
 let cachedNSFW: string[] | null = null;
 
-const initializeFilterWords = async (): Promise<void> => {
-  const filePath = path.join(__dirname, "..", "data", "slurs.txt");
-  const nsfwFilePath = path.join(__dirname, "..", "data", "nsfw-names.txt");
-
-  if (!cachedData?.length) {
-    try {
-      cachedData = await parseTXT(filePath);
-      filterTrie = createTrieNode();
-      filterDict = new Set<string>();
-      for (const row of cachedData) {
-        insertIntoTrie(filterTrie, row.text);
-        filterDict.add(row.text);
-      }
-    } catch (error) {
-      throw new Error(
-        `Initialization failed at <initializeFilterWords> for <slurs.txt>. ${error}`
-      );
-    }
+const initializeFilterWords = (): void => {
+  if (!cachedData) {
+    cachedData = Object.keys(slurs).map((key) => ({ text: key }));
+    filterTrie = createTrieNode();
+    filterDict = createHashSet(Object.keys(slurs));
+    cachedData.forEach((row) => insertIntoTrie(filterTrie!, row.text));
   }
 
-  if (!cachedNewWords?.length) {
-    try {
-      cachedNewWords = await parseTXT(nsfwFilePath);
-      newWordsTree = createTrieNode();
-      newWordsDict = new Set<string>();
-      for (const row of cachedNewWords) {
-        insertIntoTrie(newWordsTree, row.text);
-        newWordsDict.add(row.text);
-      }
-    } catch (error) {
-      throw new Error(
-        `Initialization failed at <initializeFilterWords> for <nsfw-names.txt>. ${error}`
-      );
-    }
+  if (!cachedNewWords) {
+    cachedNewWords = Object.keys(nsfwNames).map((key) => ({ text: key }));
+    newWordsTree = createTrieNode();
+    cachedNewWords.forEach((row) => insertIntoTrie(newWordsTree!, row.text));
   }
 };
 
-const parseTXT = async (filePath: string): Promise<Row[]> => {
+const fetchRobotsTxt = async (url: string): Promise<string> => {
   try {
-    const data = await fs.readFile(filePath, "utf8");
-    return data
-      .split("\n")
-      .filter((line) => line.trim())
-      .map((line) => ({ text: line.trim() }));
+    const baseUrl = new URL(url).origin;
+    const robotsUrl = `${baseUrl}/robots.txt`;
+
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.goto(robotsUrl, { timeout: 0, waitUntil: 'domcontentloaded' });
+    const robotsTxtContent = await page.evaluate(() => document.body.innerText);
+
+    await browser.close();
+    return robotsTxtContent;
   } catch (error) {
-    throw new Error(`Error during <parseTXT> for <${filePath}>. ${error}`);
+    throw new Error(
+      `Failed to fetch robots.txt for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 };
 
-const filterText = async (text: string, replace: string): Promise<string> => {
-  try {
-    if (!text) return text;
-    const words = text.split(" ");
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      if (filterDict!.has(word) || searchInTrie(filterTrie!, word)) {
-        words[i] = replace;
+const parseRobotsTxt = (
+  robotsTxtContent: string,
+  userAgent: string,
+  url: string,
+): { isAllowed: boolean; isDisallowed: boolean } => {
+  const lines = robotsTxtContent.split('\n');
+  let currentUserAgent: string | null = null;
+  let isAllowed = false;
+  let isDisallowed = false;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim().toLowerCase();
+    if (trimmedLine.toLowerCase().startsWith('user-agent:')) {
+      currentUserAgent = trimmedLine.split(':')[1].trim();
+      if (currentUserAgent === '*' || currentUserAgent === userAgent.toLowerCase()) {
+        isAllowed = false;
+        isDisallowed = false;
+      }
+    } else if (currentUserAgent === userAgent.toLowerCase() || currentUserAgent === '*') {
+      if (trimmedLine.toLowerCase().startsWith('disallow:')) {
+        const path = trimmedLine.split(':')[1].trim();
+        if (url.includes(path) || path === '') {
+          isDisallowed = true;
+        }
+      } else if (trimmedLine.toLowerCase().startsWith('allow:')) {
+        const path = trimmedLine.split(':')[1].trim();
+        if (url.includes(path)) {
+          isAllowed = true;
+        }
       }
     }
-    return words.join(" ");
+  }
+
+  if (isDisallowed === undefined) isDisallowed = false;
+  if (isAllowed === undefined) isAllowed = true;
+
+  return { isAllowed, isDisallowed };
+};
+
+const filterText = (text: string, replace: string): string => {
+  if (!text) return text;
+  const words = text.split(' ');
+  const filteredWords = words.map((word) =>
+    filterDict!.has(word) || searchInTrie(filterTrie!, word) ? replace : word,
+  );
+  return filteredWords.join(' ');
+};
+
+const scrape = async (
+  url: Readonly<string>,
+): Promise<
+  | {
+      flaggedDomain: boolean;
+      containsCensored: boolean;
+      filteredTexts: string[];
+    }
+  | { [key: string]: string }
+> => {
+  try {
+    const robotsTxtContent = await fetchRobotsTxt(url);
+
+    const userAgents = robotsTxtContent
+      .split('\n')
+      .filter(
+        (line) =>
+          line.toLowerCase().startsWith('user-agent:') ||
+          line.toLowerCase().startsWith('user-agent'),
+      )
+      .map((line) => line.split(':')[1].trim());
+
+    const [{ isAllowed, isDisallowed }] = userAgents.map((userAgent) =>
+      parseRobotsTxt(robotsTxtContent, userAgent, url),
+    );
+
+    console.log(isAllowed, isDisallowed);
+
+    if (isDisallowed) return { error: `Scraping disallowed by robots.txt for ${url}` };
+    if (!isAllowed) return { error: `Scraping not explicitly allowed by robots.txt for ${url}` };
   } catch (error) {
-    throw new Error(`Error during <filterText> for <${text}>. ${error}`);
+    throw new Error(
+      `Error during robots.txt parsing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
-};
 
-const isScrapingAllowed = (robotsText: string, url: string): boolean => {
-  const root = (url.replace(/^https?:\/\/|www\./, '')).split("/")[0]
-  const regex = new RegExp(`User-agent: *\nDisallow: /${root}/`);
-  return !regex.test(robotsText);
-};
+  if (!cachedNSFW) {
+    cachedNSFW = Object.keys(nsfw);
+  }
 
-const scrape = async (url: Readonly<string>): Promise<{
-  flaggedDomain: boolean;
-  containsCensored: boolean;
-  filteredTexts: string[];
-} | {[key: string] : string}> => {
+  const nsfw_domain = cachedNSFW.some((domain) => url.includes(domain));
+  if (nsfw_domain) {
+    return { error: 'Domain contains NSFW content' };
+  }
 
-  const robotsUrl: string = `${(url.replace(/^https?:\/\/|www\./, '')).split("/")[0]}/robots.txt`;
+  await initializeFilterWords();
+
+  let browser;
   try {
-    const response = await fetch(robotsUrl);
-    if (response.ok) {
-      const robotsText = await response.text();
-      if (!isScrapingAllowed(robotsText, url)) {
-        return {
-          error: "Scraping this domain is not allowed",
-        };
-      }
-    } else if (response.status === 404) {
-      return {
-        error: "Robots.txt not found",
-      };
-    }
+    puppeteer.use(StealthPlugin());
+    puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
+    browser = await puppeteer.launch(<LaunchOptions>{
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 0,
+    });
   } catch (error) {
-    throw new Error(`Error during <scrape> for <${robotsUrl}>. ${error}`);
+    throw new Error(
+      `Error launching browser: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 
-  const filePath = path.join(__dirname, "..", "data", "nsfw.txt");
-  
+  let page;
   try {
-    if (!cachedNSFW) {
-      try {
-        const rows = await parseTXT(filePath);
-        cachedNSFW = rows.map((row) => row.text);
-      } catch (error) {
-        throw new Error(
-          `Error during <initialize> for <${filePath}>. ${error}`
-        );
-      }
-    }
-
-    const nsfw = cachedNSFW;
-    if (
-      nsfw.includes(url.split("/")[0] === "www" ? url : url.split("/")[2])
-    ) {
-      return {
-        error: "NSFW domain",
-      };
-    }
-
-    try {
-      await initializeFilterWords();
-    } catch (error) {
-      throw new Error(`Error during <initializeFilterWords>. ${error instanceof Error ? error.stack : error}`);
-    }
-
-    let browser;
-    try {
-      puppeteer.use(StealthPlugin());
-      puppeteer.use(AdblockerPlugin({
-        blockTrackers: true,
-      }));
-      browser = await puppeteer.launch(<LaunchOptions>{
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        timeout: 0,
-      });
-    } catch (error) {
-      throw new Error(`Error during <puppeteer.launch>. ${error instanceof Error ? error.stack : error}`);
-    }
-
-    let page;
-    try {
-      page = await browser.newPage();
-    } catch (error) {
-      throw new Error(`Error during <browser.newPage>. ${error}`);
-    }
-
-    let response;
-    try {
-      response = await page.goto(url, {
-        timeout: 0,
-        waitUntil: "domcontentloaded",
-      });
-    } catch (error) {
-      throw new Error(`Error during <page.goto>. ${error}`);
-    }
-
+    page = await browser.newPage();
+    const response = await page.goto(url, { timeout: 0, waitUntil: 'domcontentloaded' });
     await wait(5);
 
     const finalUrl = response?.url() || url;
-    if (
-      cachedNSFW.includes(
-        finalUrl.split("/")[0] === "www" ? finalUrl : finalUrl.split("/")[2]
-      )
-    ) {
-      try {
-        await browser.close();
-      } catch (error) {
-        throw new Error(
-          `Error during <scrape> for <browser.close>. ${error}`
-        );
-      }
-      return {
-        error: "NSFW domain",
-      };
-    }
-
-    let texts;
-    try {
-      texts = await page.evaluate(() => {
-        const elements: Element[] = Array.from(
-          document.querySelectorAll("p, div, span, a, h1, h2, h3, h4, h5, h6, li")
-        );
-        let filteredElements: string[] = elements
-          .map((el) => el.textContent?.trim() || "")
-          .filter((text) => text.length > 0);
-        for (let i = 0; i < filteredElements.length; i++) {
-          let text = filteredElements[i];
-          text = text.replace(/[\u{1F600}-\u{1F64F}]/gu, "");
-          text = text.replace(/[^\x00-\x7F]/g, "");
-          text = text.replace(/\s+/g, " ");
-          text = text.replace(/[\n\r]+/g, " ");
-          filteredElements[i] = text;
-        }
-        return filteredElements;
-      });
-    } catch (error) {
-      throw new Error(`Error during <page.evaluate>. ${error}`);
-    }
-
-    try {
+    if (cachedNSFW.some((domain) => finalUrl.includes(domain))) {
       await browser.close();
-    } catch (error) {
-      throw new Error(`Error during <browser.close>. ${error}`);
+      return { error: 'NSFW domain' };
     }
 
-    const processedTexts: string[] = texts.map(removeDuplicates);
-    const hashSet: Set<string> = createHashSet(processedTexts);
+    const texts = await page.evaluate(() => {
+      const elements = Array.from(
+        document.querySelectorAll('p, div, span, a, h1, h2, h3, h4, h5, h6, li'),
+      );
+      return elements
+        .map(
+          (el) =>
+            el.textContent
+              ?.trim()
+              .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
+              .replace(/[^\x00-\x7F]/g, '')
+              .replace(/\s+/g, ' ')
+              .replace(/[\n\r]+/g, ' ') || '',
+        )
+        .filter((text) => text.length > 0);
+    });
 
-    const filteredTexts: string[] = await Promise.all(
-      Array.from(hashSet).map(
-        async (text) => await filterText(text, "***")
-      ),
+    await browser.close();
+
+    const processedTexts = texts.map(removeDuplicates);
+    const uniqueTexts = createHashSet(processedTexts);
+    const filteredTexts = await Promise.all(
+      Array.from(uniqueTexts).map((text) => filterText(text, '***')),
     );
 
-    const containsCensored: boolean = filteredTexts.some((text) =>
-      text.includes("***"),
-    );
+    const containsCensored = filteredTexts.some((text) => text.includes('***'));
 
     return {
       flaggedDomain: false,
-      containsCensored: containsCensored,
-      filteredTexts: filteredTexts,
+      containsCensored,
+      filteredTexts,
     };
   } catch (error) {
-    console.error(`Error during scraping: ${error instanceof Error ? error.stack : error}`);
-    throw new Error(`Scraping failed at <scrape>. ${error instanceof Error ? error.stack : error}`);
+    console.error(`Scraping failed: ${error}`);
+    throw new Error(`Scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 };
 
-export { scrape, initializeFilterWords, filterText, parseTXT };
+export { scrape, initializeFilterWords, filterText };

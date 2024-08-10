@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { scrape as scraper, initializeFilterWords } from "../classes/scraper";
+import type { Request, Response } from 'express';
+import { initializeFilterWords, scrape as scraper } from '../classes/scraper';
 
 class ScraperController {
   constructor() {
@@ -11,7 +11,9 @@ class ScraperController {
     try {
       await initializeFilterWords();
     } catch (error) {
-      throw new Error(`Failed to initialize scraper at <initializeScraper in ScraperController>. ${error}`);
+      throw new Error(
+        `Failed to initialize scraper at <initializeScraper in ScraperController>. ${error}`,
+      );
     }
   }
 
@@ -19,7 +21,7 @@ class ScraperController {
     const url = req.query.url as string;
 
     if (!url) {
-      return res.status(400).json({ message: "URL is required" });
+      return res.status(400).json({ message: 'URL is required' });
     }
 
     try {
@@ -30,12 +32,12 @@ class ScraperController {
       console.error(`Error during scraping: ${error instanceof Error ? error.stack : error}`);
 
       if (error instanceof Error) {
-        return res.status(500).json({ 
+        return res.status(500).json({
           message: `Failed to scrape url: ${url} at <scrape method in ScraperController>. ${error.message}`,
-          stack: error.stack
+          stack: error.stack,
         });
       }
-      return res.status(500).json({ message: "An unknown error occurred" });
+      return res.status(500).json({ message: 'An unknown error occurred' });
     }
   }
 }
