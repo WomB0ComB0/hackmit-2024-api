@@ -157,9 +157,16 @@ const scrape = async (
       )
       .map((line) => line.split(':')[1].trim());
 
-    const [{ isAllowed, isDisallowed }] = userAgents.map((userAgent) =>
-      parseRobotsTxt(robotsTxtContent, userAgent, url),
-    );
+    let isAllowed = true;
+    let isDisallowed = false;
+
+    if (userAgents.length > 0) {
+      const results = userAgents.map((userAgent) =>
+        parseRobotsTxt(robotsTxtContent, userAgent, url),
+      );
+      isAllowed = results.some((result) => result.isAllowed);
+      isDisallowed = results.some((result) => result.isDisallowed);
+    }
 
     console.log(isAllowed, isDisallowed);
 
