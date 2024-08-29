@@ -75,16 +75,19 @@ const fetchRobotsTxt = async (url: string): Promise<string> => {
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000, // Increase the timeout to 60 seconds
+      timeout: 60000,
     });
     const page = await browser.newPage();
 
-    await page.goto(robotsUrl, { timeout: 60000, waitUntil: 'domcontentloaded' }); // Increase the timeout here as well
+    await page.goto(robotsUrl, { timeout: 60000, waitUntil: 'domcontentloaded' });
     const robotsTxtContent = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
     return robotsTxtContent;
   } catch (error) {
+    if (error.message.includes('net::ERR_NAME_NOT_RESOLVED') || error.message.includes('404')) {
+      return '';
+    }
     throw new Error(
       `Failed to fetch robots.txt for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
@@ -145,7 +148,14 @@ const scrape = async (
   | { [key: string]: string }
 > => {
   try {
+    let isAllowed = true;
+    let isDisallowed = false;
+
     const robotsTxtContent = await fetchRobotsTxt(url);
+    
+    if (robotsTxtContent === '') {
+      return { error: 'Robots.txt not found, cannot scrape' };
+    }
 
     const userAgents = robotsTxtContent
       .split('\n')
@@ -156,8 +166,6 @@ const scrape = async (
       )
       .map((line) => line.split(':')[1].trim());
 
-    let isAllowed = true;
-    let isDisallowed = false;
 
     if (userAgents.length > 0) {
       const results = userAgents.map((userAgent) =>

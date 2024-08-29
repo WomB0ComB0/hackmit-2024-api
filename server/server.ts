@@ -49,7 +49,7 @@ class App {
 
 const api = new App().app;
 
-api.listen(3001, () => {
+api.listen(3000, () => {
   console.log('Server is running on port 3000');
 });
 
