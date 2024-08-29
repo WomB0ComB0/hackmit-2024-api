@@ -75,11 +75,11 @@ const fetchRobotsTxt = async (url: string): Promise<string> => {
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000
+      timeout: 60000, // Increase the timeout to 60 seconds
     });
     const page = await browser.newPage();
 
-    await page.goto(robotsUrl, { timeout: 0, waitUntil: 'domcontentloaded' });
+    await page.goto(robotsUrl, { timeout: 60000, waitUntil: 'domcontentloaded' }); // Increase the timeout here as well
     const robotsTxtContent = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
