@@ -72,7 +72,11 @@ const fetchRobotsTxt = async (url: string): Promise<string> => {
     const baseUrl = new URL(url).origin;
     const robotsUrl = `${baseUrl}/robots.txt`;
 
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 60000
+    });
     const page = await browser.newPage();
 
     await page.goto(robotsUrl, { timeout: 0, waitUntil: 'domcontentloaded' });
@@ -99,19 +103,15 @@ const parseRobotsTxt = (
 
   for (const line of lines) {
     const trimmedLine = line.trim().toLowerCase();
-    if (trimmedLine.toLowerCase().startsWith('user-agent:')) {
+    if (trimmedLine.startsWith('user-agent:')) {
       currentUserAgent = trimmedLine.split(':')[1].trim();
-      if (currentUserAgent === '*' || currentUserAgent === userAgent.toLowerCase()) {
-        isAllowed = false;
-        isDisallowed = false;
-      }
     } else if (currentUserAgent === userAgent.toLowerCase() || currentUserAgent === '*') {
-      if (trimmedLine.toLowerCase().startsWith('disallow:')) {
+      if (trimmedLine.startsWith('disallow:')) {
         const path = trimmedLine.split(':')[1].trim();
         if (url.includes(path) || path === '') {
           isDisallowed = true;
         }
-      } else if (trimmedLine.toLowerCase().startsWith('allow:')) {
+      } else if (trimmedLine.startsWith('allow:')) {
         const path = trimmedLine.split(':')[1].trim();
         if (url.includes(path)) {
           isAllowed = true;
@@ -120,8 +120,7 @@ const parseRobotsTxt = (
     }
   }
 
-  if (isDisallowed === undefined) isDisallowed = false;
-  if (isAllowed === undefined) isAllowed = true;
+  if (isDisallowed && isAllowed) isDisallowed = false;
 
   return { isAllowed, isDisallowed };
 };
@@ -200,7 +199,7 @@ const scrape = async (
     });
   } catch (error) {
     throw new Error(
-      `Error launching browser: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      `Error launching browser: ${error instanceof Error ? error.message : `Unknown error ${error.stack}`}`,
     );
   }
 
