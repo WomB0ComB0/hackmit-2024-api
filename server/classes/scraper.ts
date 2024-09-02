@@ -75,11 +75,14 @@ const fetchRobotsTxt = async (url: string): Promise<string> => {
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000,
+      timeout: 120000, // Increase to 2 minutes
     });
     const page = await browser.newPage();
 
-    await page.goto(robotsUrl, { timeout: 60000, waitUntil: 'domcontentloaded' });
+    await page.goto(robotsUrl, { 
+      timeout: 120000, // Increase to 2 minutes
+      waitUntil: 'domcontentloaded' 
+    });
     const robotsTxtContent = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
@@ -180,9 +183,14 @@ const scrape = async (
     if (isDisallowed) return { error: `Scraping disallowed by robots.txt for ${url}` };
     if (!isAllowed) return { error: `Scraping not explicitly allowed by robots.txt for ${url}` };
   } catch (error) {
-    throw new Error(
-      `Error during robots.txt parsing: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
+    if (error.message.includes('net::ERR_CERT_')) {
+      console.error('SSL/TLS Error:', error.message);
+      throw new Error(`SSL/TLS Error: ${error.message}`);
+    } else {
+      throw new Error(
+        `Error during robots.txt parsing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 
   if (!cachedNSFW) {

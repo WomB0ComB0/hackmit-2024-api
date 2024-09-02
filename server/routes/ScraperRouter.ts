@@ -7,7 +7,10 @@ class ScraperRouter extends BaseRoutes {
 
   constructor() {
     super();
-    this.routes();
+    this.routes().catch(error => {
+      console.error(`⚠️ Failed to initialize ScraperRouter: ${error}`);
+      throw error;
+    });
   }
 
   public async routes(): Promise<void> {
