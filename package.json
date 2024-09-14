@@ -1,5 +1,5 @@
 {
-  "name": "sparkmind-scraper-api",
+  "name": "hackmit-2024-api",
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
@@ -19,8 +19,7 @@
     "react",
     "react-router-dom"
   ],
-  "author": "Mike Odnis",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@sentry/node": "^8.22.0",
