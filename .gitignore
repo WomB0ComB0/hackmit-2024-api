@@ -1,0 +1,11 @@
+node_modules/
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.wrangler/
+.vscode/
+.vercel
+dist/
+.venv
+Fraudulent_E-Commerce_Transaction_Data.csv
