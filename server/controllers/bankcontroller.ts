@@ -1,13 +1,32 @@
+// Enum for transaction types, mediums, and statuses
+enum TransactionType {
+    Deposit = 'deposit',
+    Withdrawal = 'withdrawal',
+    Transfer = 'transfer',
+    Purchase = 'purchase',
+}
+
+enum TransactionMedium {
+    Balance = 'balance',
+    Credit = 'credit',
+}
+
+enum TransactionStatus {
+    Completed = 'completed',
+    Cancelled = 'cancelled',
+    Pending = 'pending',
+}
+
 interface Transaction {
     _id: string;
     amount: number;
     description: string;
-    medium: 'balance' | 'credit';
+    medium: TransactionMedium;
     payee_id?: string;
     payer_id?: string;
-    status: 'completed' | 'cancelled' | 'pending';
+    status: TransactionStatus;
     transaction_date: string;
-    type: 'deposit' | 'withdrawal' | 'transfer' | 'purchase';
+    type: TransactionType;
     location?: string;
 }
 
@@ -22,69 +41,52 @@ class BankAccount {
         this.accountId = accountId;
     }
 
-    // Method to make a purchase
     purchase(amount: number, description: string = 'Purchase made', location: string = 'Store'): void {
-        if (amount <= 0) {
-            throw new Error('Purchase amount must be positive.');
-        }
-        if (this.balance < amount) {
-            throw new Error('Insufficient funds.');
-        }
+        this.validateAmount(amount);
+        if (this.balance < amount) throw new Error('Insufficient funds.');
+        
         this.balance -= amount;
-        this.recordTransaction('purchase', amount, description, location, 'balance', undefined, this.accountId);
+        this.recordTransaction(TransactionType.Purchase, amount, description, location, TransactionMedium.Balance);
     }
 
-    // Method to deposit money
     deposit(amount: number, description: string = 'Deposit made', location: string = 'Online'): void {
-        if (amount <= 0) {
-            throw new Error('Deposit amount must be positive.');
-        }
+        this.validateAmount(amount);
         this.balance += amount;
-        this.recordTransaction('deposit', amount, description, location, 'balance', this.accountId, undefined);
+        this.recordTransaction(TransactionType.Deposit, amount, description, location, TransactionMedium.Balance);
     }
 
-    // Method to withdraw money
     withdraw(amount: number, description: string = 'Withdrawal made', location: string = 'ATM'): void {
-        if (amount <= 0) {
-            throw new Error('Withdrawal amount must be positive.');
-        }
-        if (this.balance < amount) {
-            throw new Error('Insufficient funds.');
-        }
+        this.validateAmount(amount);
+        if (this.balance < amount) throw new Error('Insufficient funds.');
+        
         this.balance -= amount;
-        this.recordTransaction('withdrawal', amount, description, location, 'balance', undefined, this.accountId);
+        this.recordTransaction(TransactionType.Withdrawal, amount, description, location, TransactionMedium.Balance);
     }
 
-    // Method to transfer money to another account
     transfer(amount: number, recipientAccount: BankAccount, description: string = 'Transfer made', location: string = 'Online'): void {
-        if (amount <= 0) {
-            throw new Error('Transfer amount must be positive.');
-        }
-        if (this.balance < amount) {
-            throw new Error('Insufficient funds.');
-        }
-        this.withdraw(amount, description, location); // Withdraw from current account
-        recipientAccount.deposit(amount, description, location); // Deposit into recipient's account
-        this.recordTransaction('transfer', amount, description, location, 'balance', recipientAccount.accountId, this.accountId);
+        this.validateAmount(amount);
+        if (!recipientAccount) throw new Error('Recipient account does not exist.');
+        if (this.balance < amount) throw new Error('Insufficient funds.');
+        
+        this.withdraw(amount, description, location);
+        recipientAccount.deposit(amount, description, location);
+        this.recordTransaction(TransactionType.Transfer, amount, description, location, TransactionMedium.Balance, recipientAccount.accountId, this.accountId);
     }
 
-    // Method to check current balance
     checkBalance(): number {
         return this.balance;
     }
 
-    // Method to get transaction history
     getTransactionHistory(): Transaction[] {
         return this.transactions;
     }
 
-    // Method to record each transaction
     private recordTransaction(
-        type: 'deposit' | 'withdrawal' | 'transfer' | 'purchase',
+        type: TransactionType,
         amount: number,
         description: string,
         location: string,
-        medium: 'balance' | 'credit',
+        medium: TransactionMedium,
         payee_id?: string,
         payer_id?: string
     ): void {
@@ -95,19 +97,21 @@ class BankAccount {
             medium,
             payee_id,
             payer_id,
-            status: 'completed', // Default status, can be updated if needed
+            status: TransactionStatus.Completed,
             transaction_date: new Date().toISOString(),
             type,
-            location
+            location,
         };
         this.transactions.push(transaction);
     }
 
-    // Helper method to generate a unique transaction ID
     private generateTransactionId(): string {
-        return Math.random().toString(36).substr(2, 9); // Generates a random ID
+        return Math.random().toString(36).substr(2, 9);
+    }
+
+    private validateAmount(amount: number): void {
+        if (amount <= 0) throw new Error('Amount must be positive.');
     }
 }
 
-export { BankAccount, Transaction };
-
+export { BankAccount, TransactionType, TransactionMedium, TransactionStatus, Transaction };

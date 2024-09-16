@@ -7,5 +7,3 @@ pnpm-lock.yaml
 .vscode/
 .vercel
 dist/
-.venv
-Fraudulent_E-Commerce_Transaction_Data.csv
