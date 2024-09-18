@@ -1,108 +1,126 @@
-import pandas as pd
 import random
 import numpy as np
 import json
+from typing import List, Dict, Any
+from pathlib import Path
+import logging
 
-# Set seed for reproducibility
-random.seed(42)
-np.random.seed(42)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Define min and max values for scaling purposes
-min_amount = 5
-max_amount = 5000
-preferred_time = 12  # Noon (12 PM) as the preferred transaction time
-total_time_range = 24  # Full 24-hour range
-max_distance = 5000  # Max distance in kilometers
-merchant_risk_scores = {
+# Constants
+MIN_AMOUNT = 5
+MAX_AMOUNT = 5000
+PREFERRED_TIME = 12  # Noon (12 PM) as the preferred transaction time
+TOTAL_TIME_RANGE = 24  # Full 24-hour range
+MAX_DISTANCE = 5000  # Max distance in kilometers
+MERCHANT_RISK_SCORES = {
     "Gambling": 0.9,
     "Electronics": 0.7,
     "Grocery": 0.3,
     "Fashion": 0.5,
     "Travel": 0.8,
     "Restaurants": 0.4,
-    "Entertainment": 0.6
+    "Entertainment": 0.6,
 }
-
-# Updated weights based on ranking
-weights = {
+WEIGHTS = {
     "Transaction Time": 0.35,
     "Account Age": 0.25,
     "Transaction Amount": 0.15,
     "Product Category": 0.10,
     "Customer Location": 0.10,
-    "Transaction Frequency": 0.05
+    "Transaction Frequency": 0.05,
 }
 
-# Generate random values for the mock data
-def generate_mock_transaction():
-    amount = round(random.uniform(min_amount, max_amount), 2)
-    time = round(random.uniform(0, total_time_range), 2)  # Random hour of the day
-    location = round(random.uniform(0, max_distance), 2)  # Random distance in km
-    merchant = random.choice(list(merchant_risk_scores.keys()))
-    frequency = random.randint(1, 15)  # Random number of transactions per day
-    account_age = random.randint(1, 3650)  # Random account age in days (up to 10 years)
-    
+
+def set_seed(seed: int = 42):
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def generate_mock_transaction() -> tuple:
+    amount = round(random.uniform(MIN_AMOUNT, MAX_AMOUNT), 2)
+    time = round(random.uniform(0, TOTAL_TIME_RANGE), 2)
+    location = round(random.uniform(0, MAX_DISTANCE), 2)
+    merchant = random.choice(list(MERCHANT_RISK_SCORES.keys()))
+    frequency = random.randint(1, 15)
+    account_age = random.randint(1, 3650)
     return amount, time, location, merchant, frequency, account_age
 
-# Calculate normalized feature scores for each transaction
-def normalize_and_score(amount, time, location, merchant, frequency, account_age):
-    # Normalize features
-    scaled_amount = (amount - min_amount) / (max_amount - min_amount)
-    scaled_time = abs(time - preferred_time) / total_time_range
-    scaled_location = location / max_distance
-    merchant_score = merchant_risk_scores[merchant]
-    scaled_frequency = (frequency - 1) / 14  # Normalize based on a range of 1-15
-    scaled_account_age = account_age / 3650  # Normalize based on a 10-year maximum age
-    
-    # Calculate the fraud score using the weighted sum with new weights
-    fraud_score = (
-        weights["Transaction Time"] * scaled_time +
-        weights["Account Age"] * scaled_account_age +
-        weights["Transaction Amount"] * scaled_amount +
-        weights["Product Category"] * merchant_score +
-        weights["Customer Location"] * scaled_location +
-        weights["Transaction Frequency"] * scaled_frequency
+
+def normalize_and_score(
+    amount: float,
+    time: float,
+    location: float,
+    merchant: str,
+    frequency: int,
+    account_age: int,
+) -> float:
+    scaled_amount = (amount - MIN_AMOUNT) / (MAX_AMOUNT - MIN_AMOUNT)
+    scaled_time = abs(time - PREFERRED_TIME) / TOTAL_TIME_RANGE
+    scaled_location = location / MAX_DISTANCE
+    merchant_score = MERCHANT_RISK_SCORES[merchant]
+    scaled_frequency = (frequency - 1) / 14
+    scaled_account_age = account_age / 3650
+
+    fraud_score = sum(
+        WEIGHTS[key] * value
+        for key, value in {
+            "Transaction Time": scaled_time,
+            "Account Age": scaled_account_age,
+            "Transaction Amount": scaled_amount,
+            "Product Category": merchant_score,
+            "Customer Location": scaled_location,
+            "Transaction Frequency": scaled_frequency,
+        }.items()
     )
-    
-    # Add random noise to simulate real-world conditions
+
     random_noise = np.random.uniform(-0.05, 0.05)
-    final_fraud_score = max(0, min(fraud_score + random_noise, 1))  # Ensure fraud score stays between 0 and 1
-    
-    # Round the fraud score to 2 decimal points
+    final_fraud_score = max(0, min(fraud_score + random_noise, 1))
     return round(final_fraud_score, 2)
 
-# Generate a mock dataset
-def generate_mock_transactions(num_records):
-    transactions = []
-    
-    for _ in range(num_records):
-        amount, time, location, merchant, frequency, account_age = generate_mock_transaction()
-        fraud_score = normalize_and_score(amount, time, location, merchant, frequency, account_age)
-        
-        transaction = {
+
+def generate_mock_transactions(num_records: int) -> List[Dict[str, Any]]:
+    return [
+        {
             "Transaction Amount": amount,
             "Transaction Time": time,
             "Location": location,
             "Merchant Type": merchant,
             "Transaction Frequency": frequency,
             "Account Age": account_age,
-            "Fraud Score": fraud_score
+            "Fraud Score": normalize_and_score(
+                amount, time, location, merchant, frequency, account_age
+            ),
         }
-        
-        transactions.append(transaction)
-    
-    return transactions
+        for amount, time, location, merchant, frequency, account_age in (
+            generate_mock_transaction() for _ in range(num_records)
+        )
+    ]
 
-# Generate 10,000 mock transactions
-mock_transactions = generate_mock_transactions(10000)
 
-# Save the data to a JSON file
-print("Saving transactions to JSON file...")
-with open("mock_bank_transactions_data.json", "w") as json_file:
-    json.dump(mock_transactions, json_file, indent=4)
+def save_transactions(transactions: List[Dict[str, Any]], filename: str):
+    try:
+        Path(filename).parent.mkdir(parents=True, exist_ok=True)
+        with open(filename, "w", encoding="utf-8") as json_file:
+            json.dump(transactions, json_file, indent=4)
+        logger.info(f"Transactions saved to {filename}")
+    except IOError as e:
+        logger.error(f"Error saving transactions to {filename}: {e}")
+        raise
 
-print("Transactions saved to mock_bank_transactions_data.json")
 
-# Display the first few transactions
-print("Here are the first 5 transactions:")
-print(mock_transactions[:5])
+def main(
+    num_records: int = 10000, output_file: str = "mock_bank_transactions_data.json"
+):
+    set_seed()
+    logger.info(f"Generating {num_records} mock transactions...")
+    mock_transactions = generate_mock_transactions(num_records)
+    save_transactions(mock_transactions, output_file)
+    logger.info("Here are the first 5 transactions:")
+    for transaction in mock_transactions[:5]:
+        logger.info(json.dumps(transaction, indent=2))
+
+
+if __name__ == "__main__":
+    main()

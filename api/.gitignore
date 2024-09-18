@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+__pytest_cache__
+.env
+venv
