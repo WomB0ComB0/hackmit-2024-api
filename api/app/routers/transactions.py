@@ -1,10 +1,10 @@
 # pylint: disable=E0401
 
 from fastapi import APIRouter
-from app.models.transaction import TransactionCreate, TransactionResponse
-from app.ml.logistic_regression import predict_fraud
-from app.ml.llama_integration import analyze_transaction
-from app.ml.tf_model import predict_fraud_tf
+from ..models.transaction import TransactionCreate, TransactionResponse
+from ..ml.logistic_regression import predict_fraud
+from ..ml.llama_integration import analyze_transaction
+from ..ml.tf_model import predict_fraud_tf
 
 router = APIRouter()
 
