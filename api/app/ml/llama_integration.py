@@ -1,16 +1,16 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 HUGGING_FACE_API_TOKEN = os.getenv("HUGGING_FACE_API_TOKEN")
+
 
 def analyze_transaction(transaction_details):
     try:
         from transformers import GPT2Tokenizer, GPT2LMHeadModel
         import torch
-
-        # Initialize tokenizer and model
+        
         tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         model = GPT2LMHeadModel.from_pretrained("gpt2")
 
@@ -28,7 +28,9 @@ def analyze_transaction(transaction_details):
         return is_fraudulent, explanation
 
     except ImportError:
-        print("Error: Required libraries not found. Make sure transformers and torch are installed.")
+        print(
+            "Error: Required libraries not found. Make sure transformers and torch are installed."
+        )
         return False, "Error: Unable to analyze transaction due to missing libraries."
     except Exception as e:
         print(f"Error in analyze_transaction: {str(e)}")

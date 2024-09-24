@@ -52,7 +52,7 @@ class TransactionService:
             # Add more features here
             len(transaction.product_category),
             len(transaction.customer_location),
-            1 if transaction.is_fraudulent else 0  # Convert boolean to int
+            1 if transaction.is_fraudulent else 0,  # Convert boolean to int
         ]
         return features
 

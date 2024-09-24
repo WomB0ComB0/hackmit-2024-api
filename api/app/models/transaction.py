@@ -18,16 +18,17 @@ class TransactionCreate(TransactionBase):
     )
 
 
-class TransactionResponse(TransactionBase):
+class TransactionResponse(BaseModel):
     id: int
-    transaction_date: datetime
+    amount: float = Field(..., gt=0, description="Transaction amount")
+    product_category: str = Field(..., description="Product category")
+    customer_location: str = Field(..., description="Customer location")
+    account_age_days: int = Field(..., ge=0, description="Account age in days")
+    transaction_date: datetime = Field(..., description="Transaction date and time")
     is_fraudulent: Optional[bool] = Field(None, description="Fraud prediction result")
     fraud_explanation: Optional[str] = Field(
         None, description="Explanation for fraud prediction"
     )
-
-    class Config:
-        orm_mode = True
 
 
 class TransactionUpdate(BaseModel):
