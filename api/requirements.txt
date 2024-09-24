@@ -6,10 +6,11 @@ httpx
 scikit-learn
 numpy
 python-dateutil
-tensorflow
+tensorflow-cpu
 torch
 transformers
 sqlalchemy
 pymysql
 pandas
 joblib
+python-dotenv

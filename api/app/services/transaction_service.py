@@ -1,10 +1,10 @@
 # pylint: disable=E0401
 
 from sqlalchemy.orm import Session
-from app.models.transaction import TransactionCreate, TransactionUpdate
-from app.db.models import Transaction
-from app.ml.logistic_regression import predict_fraud, train_model
-from app.ml.llama_integration import analyze_transaction
+from ..models.transaction import TransactionCreate, TransactionUpdate
+from ..db.models import Transaction
+from ..ml.logistic_regression import predict_fraud, train_model
+from ..ml.llama_integration import analyze_transaction
 
 
 class TransactionService:
