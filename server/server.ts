@@ -1,5 +1,4 @@
 import { ConvexHttpClient } from 'convex/browser';
-// import dotenv from 'dotenv';
 import express, {
   type Application,
   type NextFunction,
@@ -11,9 +10,6 @@ import { type RateLimitRequestHandler, rateLimit } from 'express-rate-limit';
 import { api } from './convex/_generated/api';
 import type { Id } from './convex/_generated/dataModel';
 import { errorHandler } from './middlewares';
-// import path from 'path';
-
-// dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
 class App {
   public app: Application;
@@ -21,8 +17,8 @@ class App {
 
   constructor() {
     this.app = express();
-    const convexUrl = 'https://benevolent-manatee-676.convex.cloud' as string;
-    console.log(convexUrl);
+    const convexUrl = process.env.CONVEX_URL || 'https://benevolent-manatee-676.convex.cloud';
+    console.log('Convex URL:', convexUrl);
     if (!convexUrl) {
       throw new Error('CONVEX_URL environment variable is not set');
     }
