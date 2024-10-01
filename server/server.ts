@@ -65,7 +65,10 @@ class App {
       .post('/', this.limiter, this.handleAsync(this.createUser))
       .get('/:id', this.limiter, this.handleAsync(this.getUser))
       .put('/:id', this.limiter, this.handleAsync(this.updateUser))
-      .delete('/:id', this.limiter, this.handleAsync(this.deleteUser));
+      .delete('/:id', this.limiter, this.handleAsync(this.deleteUser))
+      .head('/', this.limiter, this.handleAsync(this.headUser))
+      .options('/', this.limiter, this.handleAsync(this.optionsUser));
+      
   }
 
   private createTransactionRouter(): Router {
@@ -73,7 +76,9 @@ class App {
       .post('/', this.limiter, this.handleAsync(this.createTransaction))
       .get('/:id', this.limiter, this.handleAsync(this.getTransaction))
       .put('/:id', this.limiter, this.handleAsync(this.updateTransaction))
-      .delete('/:id', this.limiter, this.handleAsync(this.deleteTransaction));
+      .delete('/:id', this.limiter, this.handleAsync(this.deleteTransaction))
+      .head('/', this.limiter, this.handleAsync(this.headTransaction))
+      .options('/', this.limiter, this.handleAsync(this.optionsTransaction));
   }
 
   private handleAsync(fn: (req: Request, res: Response) => Promise<void>) {
