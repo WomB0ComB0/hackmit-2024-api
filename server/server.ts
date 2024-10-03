@@ -146,7 +146,6 @@ class App {
       const fraudPrediction = await this.predictFraud(fraudPredictionData);
       
       if (fraudPrediction.detail) {
-        // If there's an error from the fraud prediction API
         res.status(422).json({
           error: 'Invalid transaction data',
           details: fraudPrediction.detail
