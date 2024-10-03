@@ -120,6 +120,18 @@ class App {
     res.status(204).send();
   }
 
+  private async headUser(_req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE, HEAD, OPTIONS');
+    res.status(200).send();
+  }
+
+  private async optionsUser(_req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE, HEAD, OPTIONS');
+    res.status(200).send();
+  }
+
   private async createTransaction(req: Request, res: Response): Promise<void> {
     try {
       const transactionData = req.body;
@@ -183,6 +195,18 @@ class App {
       id: transactionId,
     });
     res.status(204).send();
+  }
+
+  private async headTransaction(_req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE, HEAD, OPTIONS');
+    res.status(200).send();
+  }
+
+  private async optionsTransaction(_req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE, HEAD, OPTIONS');
+    res.status(200).send();
   }
 
   private async predictFraud(transactionData: any): Promise<any> {
