@@ -40,9 +40,13 @@ export const deleteUser = mutation({
 });
 
 export const getUser = query({
-  args: { id: v.id('users') },
+  args: { id: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const user = await ctx.db
+      .query('users')
+      .filter((q) => q.eq(q.field('id'), args.id))
+      .first();
+    return user;
   },
 });
 

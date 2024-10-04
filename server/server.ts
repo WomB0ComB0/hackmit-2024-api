@@ -95,7 +95,7 @@ class App {
   }
 
   private async getUser(req: Request, res: Response): Promise<void> {
-    const userId = req.params.id as Id<'users'>;
+    const userId = req.params.id;
     const user = await this.convex.query(api.users.getUser, { id: userId });
     if (user) {
       res.json(user);

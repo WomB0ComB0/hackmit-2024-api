@@ -6,11 +6,10 @@ export default defineSchema({
     id: v.string(),
     name: v.string(),
     email: v.string(),
-    // Add other user fields as needed
   }).index('by_email', ['email']),
 
   transactions: defineTable({
-    userId: v.id('users'),
+    userId: v.string(),
     amount: v.number(),
     productCategory: v.string(),
     customerLocation: v.string(),
