@@ -148,12 +148,6 @@ class App {
         return;
       }
 
-      const user = await this.convex.query(api.users.getUser, { id: transactionData.userId });
-      if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-
       const fraudPredictionData = {
         amount: transactionData.amount,
         product_category: transactionData.productCategory,

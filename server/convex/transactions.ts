@@ -3,21 +3,17 @@ import { mutation, query } from './_generated/server';
 
 export const createTransaction = mutation({
   args: {
-    userId: v.id('users'),
+    userId: v.string(),
     amount: v.number(),
     productCategory: v.string(),
     customerLocation: v.string(),
     accountAgeDays: v.number(),
     transactionDate: v.string(),
-    isFraudulent: v.optional(v.boolean()),
-    fraudExplanation: v.optional(v.string()),
+    isFraudulent: v.boolean(),
+    fraudExplanation: v.string(),
   },
   handler: async (ctx, args) => {
-    const transactionId = await ctx.db.insert('transactions', {
-      ...args,
-      isFraudulent: args.isFraudulent || false,
-      fraudExplanation: args.fraudExplanation || '',
-    });
+    const transactionId = await ctx.db.insert('transactions', args);
     return transactionId;
   },
 });

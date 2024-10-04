@@ -1,6 +1,6 @@
 import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
 import { Id } from './_generated/dataModel';
+import { mutation, query } from './_generated/server';
 
 export const createUser = mutation({
   args: { id: v.string(), name: v.string(), email: v.string() },
