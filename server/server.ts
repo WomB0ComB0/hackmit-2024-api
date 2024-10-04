@@ -10,6 +10,7 @@ import { type RateLimitRequestHandler, rateLimit } from 'express-rate-limit';
 import { api } from './convex/_generated/api';
 import type { Id } from './convex/_generated/dataModel';
 import { errorHandler } from './middlewares';
+import cors from 'cors';
 
 class App {
   public app: Application;
@@ -49,17 +50,14 @@ class App {
   private configureMiddleware(): void {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(this.setCorsHeaders);
-    this.app.use(this.limiter); // Apply the rate limiter to all routes
-  }
-
-  private setCorsHeaders(_req: Request, res: Response, next: NextFunction): void {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000, https://www.fraudguard.tech/');
-
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, X-Forwarded-For');
-    next();
+    this.app.use(cors({
+      origin: ['http://localhost:3000', 'https://www.fraudguard.tech'],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'X-Forwarded-For'],
+    }));
+    
+    this.app.use(this.limiter);
   }
 
   private createUserRouter(): Router {
