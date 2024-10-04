@@ -134,7 +134,14 @@ class App {
 
   private async createTransaction(req: Request, res: Response): Promise<void> {
     try {
+      console.log('Received transaction data:', req.body);
       const transactionData = req.body;
+
+      if (!transactionData.userId) {
+        res.status(400).json({ error: 'userId is required' });
+        return;
+      }
+
       const fraudPredictionData = {
         amount: transactionData.amount,
         product_category: transactionData.productCategory,
