@@ -13,8 +13,16 @@ export const createTransaction = mutation({
     fraudExplanation: v.string(),
   },
   handler: async (ctx, args) => {
-    const transactionId = await ctx.db.insert('transactions', args);
-    return transactionId;
+    try {
+      console.log('Attempting to insert transaction:', args);
+      const transactionId = await ctx.db.insert('transactions', args);
+      console.log('Transaction inserted successfully:', transactionId);
+      return transactionId;
+    } catch (error) {
+      console.error('Error inserting transaction:', error);
+      console.error('Transaction data:', args);
+      throw new Error(`Failed to create transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
 
@@ -51,11 +59,41 @@ export const deleteTransaction = mutation({
 });
 
 export const getUserTransactions = query({
-  args: { userId: v.id('users') },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query('transactions')
       .withIndex('by_userId', (q) => q.eq('userId', args.userId))
       .collect();
+  },
+});
+
+export const storeTempFraudPrediction = mutation({
+  args: {
+    userId: v.string(),
+    amount: v.number(),
+    productCategory: v.string(),
+    customerLocation: v.string(),
+    accountAgeDays: v.number(),
+    transactionDate: v.string(),
+    isFraudulent: v.boolean(),
+    fraudExplanation: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const tempId = await ctx.db.insert('tempTransactions', args);
+    return tempId;
+  },
+});
+
+export const finalizeTempTransaction = mutation({
+  args: { tempId: v.id('tempTransactions') },
+  handler: async (ctx, args) => {
+    const tempTransaction = await ctx.db.get(args.tempId);
+    if (!tempTransaction) {
+      throw new Error('Temporary transaction not found');
+    }
+    const transactionId = await ctx.db.insert('transactions', tempTransaction);
+    await ctx.db.delete(args.tempId);
+    return transactionId;
   },
 });

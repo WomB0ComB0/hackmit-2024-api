@@ -75,6 +75,7 @@ class App {
   private createTransactionRouter(): Router {
     return Router()
       .post('/', this.limiter, this.handleAsync(this.createTransaction))
+      .post('/finalize', this.limiter, this.handleAsync(this.finalizeTransaction))
       .get('/:id', this.limiter, this.handleAsync(this.getTransaction))
       .put('/:id', this.limiter, this.handleAsync(this.updateTransaction))
       .delete('/:id', this.limiter, this.handleAsync(this.deleteTransaction))
@@ -144,10 +145,12 @@ class App {
       const transactionData = req.body;
 
       if (!transactionData.userId) {
+        console.log('userId is missing');
         res.status(400).json({ error: 'userId is required' });
         return;
       }
 
+      console.log('Preparing fraud prediction data');
       const fraudPredictionData = {
         amount: transactionData.amount,
         product_category: transactionData.productCategory,
@@ -156,7 +159,19 @@ class App {
         transaction_date: transactionData.transactionDate,
       };
 
-      const fraudPrediction = await this.predictFraud(fraudPredictionData);
+      console.log('Calling fraud prediction API');
+      let fraudPrediction;
+      try {
+        fraudPrediction = await this.predictFraud(fraudPredictionData);
+      } catch (error) {
+        console.error('Fraud prediction failed:', error);
+        res.status(503).json({
+          error: 'Fraud prediction service unavailable',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+        return;
+      }
+      console.log('Fraud prediction result:', fraudPrediction);
 
       if (fraudPrediction.detail) {
         res.status(422).json({
@@ -166,16 +181,44 @@ class App {
         return;
       }
 
-      const transactionId = await this.convex.mutation(api.transactions.createTransaction, {
+      // Store the fraud prediction result temporarily
+      const tempId = await this.convex.mutation(api.transactions.storeTempFraudPrediction, {
         ...transactionData,
         isFraudulent: fraudPrediction.is_fraudulent,
         fraudExplanation: fraudPrediction.fraud_explanation || '',
       });
 
-      res.json({ transactionId, ...fraudPrediction });
+      // Return the temporary ID to the client
+      res.json({ tempId, ...fraudPrediction });
     } catch (error) {
-      console.error('Error creating transaction:', error);
-      res.status(500).json({ error: 'An error occurred while creating the transaction' });
+      console.error('Unexpected error in createTransaction:', error);
+      res.status(500).json({
+        error: 'An unexpected error occurred while processing the transaction',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // New function to finalize the transaction
+  private async finalizeTransaction(req: Request, res: Response): Promise<void> {
+    try {
+      const { tempId } = req.body;
+      if (!tempId) {
+        res.status(400).json({ error: 'tempId is required' });
+        return;
+      }
+
+      console.log('Finalizing transaction');
+      const transactionId = await this.convex.mutation(api.transactions.finalizeTempTransaction, { tempId });
+      console.log('Transaction finalized with ID:', transactionId);
+
+      res.json({ transactionId });
+    } catch (error) {
+      console.error('Error finalizing transaction:', error);
+      res.status(500).json({
+        error: 'An error occurred while finalizing the transaction',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 
@@ -222,20 +265,42 @@ class App {
   }
 
   private async predictFraud(transactionData: any): Promise<any> {
-    const response = await fetch(
-      'https://hackmit-2024-api-703466588724.us-central1.run.app/api/v1/predict_fraud',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transactionData),
-      },
-    );
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Fraud prediction API error:', data);
-      throw new Error('Fraud prediction failed');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // Increase timeout to 15 seconds
+
+    try {
+      console.log('Starting fraud prediction request');
+      const response = await fetch(
+        'https://hackmit-2024-api-703466588724.us-central1.run.app/api/v1/predict_fraud',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData),
+          signal: controller.signal,
+        },
+      );
+      clearTimeout(timeoutId);
+      console.log('Fraud prediction response received');
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Fraud prediction API error:', response.status, errorText);
+        throw new Error(`Fraud prediction failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Fraud prediction data:', data);
+      return data;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Fraud prediction request timed out');
+        throw new Error('Fraud prediction request timed out');
+      }
+      console.error('Error in fraud prediction:', error);
+      throw new Error(`Fraud prediction error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return data;
   }
 }
 

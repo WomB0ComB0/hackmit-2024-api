@@ -18,4 +18,15 @@ export default defineSchema({
     isFraudulent: v.boolean(),
     fraudExplanation: v.string(),
   }).index('by_userId', ['userId']),
+
+  tempTransactions: defineTable({
+    userId: v.string(),
+    amount: v.number(),
+    productCategory: v.string(),
+    customerLocation: v.string(),
+    accountAgeDays: v.number(),
+    transactionDate: v.string(),
+    isFraudulent: v.boolean(),
+    fraudExplanation: v.string(),
+  }),
 });
