@@ -76,7 +76,9 @@ class App {
     return Router()
       .post('/', this.limiter, this.handleAsync(this.createTransaction))
       .post('/finalize', this.limiter, this.handleAsync(this.finalizeTransaction))
-      .get('/:id', this.limiter, this.handleAsync(this.getTransaction))
+      .get('/', this.limiter, this.handleAsync(this.getAllTransactions))
+      .get('/:id', this.limiter, this.handleAsync(this.getTransactionById))
+      .get('/user/:userId', this.limiter, this.handleAsync(this.getTransactionsByUserId))
       .put('/:id', this.limiter, this.handleAsync(this.updateTransaction))
       .delete('/:id', this.limiter, this.handleAsync(this.deleteTransaction))
       .head('/', this.limiter, this.handleAsync(this.headTransaction))
@@ -150,46 +152,15 @@ class App {
         return;
       }
 
-      console.log('Preparing fraud prediction data');
-      const fraudPredictionData = {
-        amount: transactionData.amount,
-        product_category: transactionData.productCategory,
-        customer_location: transactionData.customerLocation,
-        account_age_days: transactionData.accountAgeDays,
-        transaction_date: transactionData.transactionDate,
-      };
+      // Store the initial transaction data
+      const tempId = await this.convex.mutation(api.transactions.storeTempTransaction, transactionData);
+      console.log('Temporary transaction stored with ID:', tempId);
 
-      console.log('Calling fraud prediction API');
-      let fraudPrediction;
-      try {
-        fraudPrediction = await this.predictFraud(fraudPredictionData);
-      } catch (error) {
-        console.error('Fraud prediction failed:', error);
-        res.status(503).json({
-          error: 'Fraud prediction service unavailable',
-          details: error instanceof Error ? error.message : 'Unknown error',
-        });
-        return;
-      }
-      console.log('Fraud prediction result:', fraudPrediction);
+      // Start fraud prediction in the background
+      this.startFraudPrediction(tempId, transactionData);
 
-      if (fraudPrediction.detail) {
-        res.status(422).json({
-          error: 'Invalid transaction data',
-          details: fraudPrediction.detail,
-        });
-        return;
-      }
-
-      // Store the fraud prediction result temporarily
-      const tempId = await this.convex.mutation(api.transactions.storeTempFraudPrediction, {
-        ...transactionData,
-        isFraudulent: fraudPrediction.is_fraudulent,
-        fraudExplanation: fraudPrediction.fraud_explanation || '',
-      });
-
-      // Return the temporary ID to the client
-      res.json({ tempId, ...fraudPrediction });
+      console.log('Sending response with tempId:', tempId); // Add this line
+      res.json({ tempId, message: 'Transaction processing started' });
     } catch (error) {
       console.error('Unexpected error in createTransaction:', error);
       res.status(500).json({
@@ -199,16 +170,44 @@ class App {
     }
   }
 
-  // New function to finalize the transaction
+  private async startFraudPrediction(tempId: string, transactionData: any): Promise<void> {
+    try {
+      const fraudPredictionData = {
+        amount: transactionData.amount,
+        product_category: transactionData.productCategory,
+        customer_location: transactionData.customerLocation,
+        account_age_days: transactionData.accountAgeDays,
+        transaction_date: transactionData.transactionDate,
+      };
+
+      const fraudPrediction = await this.predictFraud(fraudPredictionData);
+      
+      await this.convex.mutation(api.transactions.updateTempTransactionWithFraudPrediction, {
+        tempId: tempId as Id<'tempTransactions'>,
+        isFraudulent: fraudPrediction.is_fraudulent,
+        fraudExplanation: fraudPrediction.fraud_explanation || '',
+      });
+
+      console.log('Fraud prediction completed for tempId:', tempId);
+    } catch (error) {
+      console.error('Error in fraud prediction:', error);
+      await this.convex.mutation(api.transactions.updateTempTransactionWithError, {
+        tempId: tempId as Id<'tempTransactions'>,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
   private async finalizeTransaction(req: Request, res: Response): Promise<void> {
     try {
       const { tempId } = req.body;
+      console.log('Received tempId for finalization:', tempId);
       if (!tempId) {
         res.status(400).json({ error: 'tempId is required' });
         return;
       }
 
-      console.log('Finalizing transaction');
+      console.log('Calling finalizeTempTransaction with tempId:', tempId);
       const transactionId = await this.convex.mutation(api.transactions.finalizeTempTransaction, { tempId });
       console.log('Transaction finalized with ID:', transactionId);
 
@@ -219,18 +218,6 @@ class App {
         error: 'An error occurred while finalizing the transaction',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
-    }
-  }
-
-  private async getTransaction(req: Request, res: Response): Promise<void> {
-    const transactionId = req.params.id as Id<'transactions'>;
-    const transaction = await this.convex.query(api.transactions.getTransaction, {
-      id: transactionId,
-    });
-    if (transaction) {
-      res.json(transaction);
-    } else {
-      res.status(404).json({ error: 'Transaction not found' });
     }
   }
 
@@ -300,6 +287,48 @@ class App {
       throw new Error(`Fraud prediction error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       clearTimeout(timeoutId);
+    }
+  }
+
+  private async getAllTransactions(_req: Request, res: Response): Promise<void> {
+    try {
+      const transactions = await this.convex.query(api.transactions.getAllTransactions);
+      console.log('Retrieved all transactions:', transactions);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching all transactions:', error);
+      res.status(500).json({ error: 'An error occurred while fetching transactions' });
+    }
+  }
+
+  private async getTransactionById(req: Request, res: Response): Promise<void> {
+    const transactionId = req.params.id as Id<'transactions'>;
+    try {
+      console.log('Fetching transaction with ID:', transactionId);
+      const transaction = await this.convex.query(api.transactions.getTransactionById, { id: transactionId });
+      if (transaction) {
+        console.log('Retrieved transaction:', transaction);
+        res.json(transaction);
+      } else {
+        console.log('Transaction not found for ID:', transactionId);
+        res.status(404).json({ error: 'Transaction not found' });
+      }
+    } catch (error) {
+      console.error('Error fetching transaction:', error);
+      res.status(500).json({ error: 'An error occurred while fetching the transaction' });
+    }
+  }
+
+  private async getTransactionsByUserId(req: Request, res: Response): Promise<void> {
+    const userId = req.params.userId;
+    try {
+      console.log('Fetching transactions for user ID:', userId);
+      const transactions = await this.convex.query(api.transactions.getTransactionsByUserId, { userId });
+      console.log('Retrieved transactions for user:', transactions);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching transactions for user:', error);
+      res.status(500).json({ error: 'An error occurred while fetching transactions for the user' });
     }
   }
 }
