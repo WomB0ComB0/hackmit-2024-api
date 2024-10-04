@@ -96,11 +96,16 @@ class App {
 
   private async getUser(req: Request, res: Response): Promise<void> {
     const userId = req.params.id;
-    const user = await this.convex.query(api.users.getUser, { id: userId });
-    if (user) {
-      res.json(user);
-    } else {
-      res.status(404).json({ error: 'User not found' });
+    try {
+      const user = await this.convex.query(api.users.getUser, { id: userId });
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: 'An error occurred while fetching the user' });
     }
   }
 

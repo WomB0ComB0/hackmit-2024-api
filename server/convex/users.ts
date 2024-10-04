@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
+import { Id } from './_generated/dataModel';
 
 export const createUser = mutation({
   args: { id: v.string(), name: v.string(), email: v.string() },
@@ -23,9 +24,13 @@ export const createUser = mutation({
 });
 
 export const updateUser = mutation({
-  args: { id: v.id('users'), name: v.string(), email: v.string() },
+  args: { id: v.union(v.string(), v.id('users')), name: v.string(), email: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
+    const user = await getUser(ctx, { id: args.id });
+    if (!user) {
+      throw new Error('User not found');
+    }
+    await ctx.db.patch(user._id, {
       name: args.name,
       email: args.email,
     });
@@ -33,20 +38,27 @@ export const updateUser = mutation({
 });
 
 export const deleteUser = mutation({
-  args: { id: v.id('users') },
+  args: { id: v.union(v.string(), v.id('users')) },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    const user = await getUser(ctx, { id: args.id });
+    if (!user) {
+      throw new Error('User not found');
+    }
+    await ctx.db.delete(user._id);
   },
 });
 
 export const getUser = query({
-  args: { id: v.string() },
+  args: { id: v.union(v.string(), v.id('users')) },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query('users')
-      .filter((q) => q.eq(q.field('id'), args.id))
-      .first();
-    return user;
+    if (typeof args.id === 'string') {
+      return await ctx.db
+        .query('users')
+        .filter((q) => q.eq(q.field('id'), args.id))
+        .first();
+    } else {
+      return await ctx.db.get(args.id);
+    }
   },
 });
 
