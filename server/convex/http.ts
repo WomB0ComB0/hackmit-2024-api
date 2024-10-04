@@ -9,7 +9,7 @@ http.route({
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
     const { name, email } = await request.json();
-    const userId = await ctx.runMutation(api.users.createUser, { name, email });
+    const userId = await ctx.runMutation(api.users.createUser, { id: '', name, email });
     return new Response(JSON.stringify({ userId }), {
       status: 200,
       headers: {

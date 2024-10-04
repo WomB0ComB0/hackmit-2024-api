@@ -1,4 +1,5 @@
 import { ConvexHttpClient } from 'convex/browser';
+import cors from 'cors';
 import express, {
   type Application,
   type NextFunction,
@@ -10,7 +11,6 @@ import { type RateLimitRequestHandler, rateLimit } from 'express-rate-limit';
 import { api } from './convex/_generated/api';
 import type { Id } from './convex/_generated/dataModel';
 import { errorHandler } from './middlewares';
-import cors from 'cors';
 
 class App {
   public app: Application;
@@ -50,13 +50,15 @@ class App {
   private configureMiddleware(): void {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(cors({
-      origin: ['http://localhost:3000', 'https://www.fraudguard.tech'],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'X-Forwarded-For'],
-    }));
-    
+    this.app.use(
+      cors({
+        origin: ['http://localhost:3000', 'https://www.fraudguard.tech'],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'X-Forwarded-For'],
+      }),
+    );
+
     this.app.use(this.limiter);
   }
 
@@ -68,7 +70,6 @@ class App {
       .delete('/:id', this.limiter, this.handleAsync(this.deleteUser))
       .head('/', this.limiter, this.handleAsync(this.headUser))
       .options('/', this.limiter, this.handleAsync(this.optionsUser));
-      
   }
 
   private createTransactionRouter(): Router {
@@ -88,8 +89,8 @@ class App {
   }
 
   private async createUser(req: Request, res: Response): Promise<void> {
-    const { name, email } = req.body;
-    const userId = await this.convex.mutation(api.users.createUser, { name, email });
+    const { id, name, email } = req.body;
+    const userId = await this.convex.mutation(api.users.createUser, { id, name, email });
     res.json({ userId });
   }
 
@@ -142,30 +143,36 @@ class App {
         return;
       }
 
+      const user = await this.convex.query(api.users.getUser, { id: transactionData.userId });
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
       const fraudPredictionData = {
         amount: transactionData.amount,
         product_category: transactionData.productCategory,
         customer_location: transactionData.customerLocation,
         account_age_days: transactionData.accountAgeDays,
-        transaction_date: transactionData.transactionDate
+        transaction_date: transactionData.transactionDate,
       };
-      
+
       const fraudPrediction = await this.predictFraud(fraudPredictionData);
-      
+
       if (fraudPrediction.detail) {
         res.status(422).json({
           error: 'Invalid transaction data',
-          details: fraudPrediction.detail
+          details: fraudPrediction.detail,
         });
         return;
       }
-      
+
       const transactionId = await this.convex.mutation(api.transactions.createTransaction, {
         ...transactionData,
         isFraudulent: fraudPrediction.is_fraudulent,
         fraudExplanation: fraudPrediction.fraud_explanation || '',
       });
-      
+
       res.json({ transactionId, ...fraudPrediction });
     } catch (error) {
       console.error('Error creating transaction:', error);
