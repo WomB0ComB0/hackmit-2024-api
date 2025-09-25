@@ -1,73 +1,66 @@
-# HackMIT 2024 API
+# HackMIT 2024 API - Fraud Detection and Transaction Management
 
-A TypeScript-based API server developed for HackMIT 2024 hackathon project. This repository is a fork of the original project with custom modifications and enhancements.
+## 🌟 Overview
 
-## 📋 Overview
+This monorepo project, developed during HackMIT 2024, provides a robust backend infrastructure for managing user transactions and detecting potential fraud. It leverages a dual-stack approach, combining a Python-based FastAPI service for machine learning-driven fraud prediction with a TypeScript-based Express.js server for API routing and interaction with a Convex.dev backend as a service (BaaS) for data persistence. This setup ensures both high performance for ML inferences and efficient, scalable data management.
 
-This project contains the backend API infrastructure built during HackMIT 2024. The codebase is primarily written in TypeScript and follows modern API development practices.
+This repository is a fork of an original project, enhanced with custom modifications and extended functionalities, particularly in the fraud detection capabilities.
 
-## 🏗️ Project Structure
+## ✨ Features
 
-```
-hackmit-2024-api/
-├── api/          # API routes and endpoints
-├── server/       # Server configuration and setup
-└── ...          # Additional project files
-```
+- **User Management**: API endpoints for creating, retrieving, updating, and deleting user records.
+- **Transaction Management**: Comprehensive API for handling transaction creation, retrieval (all, by ID, by user), updates, and deletions.
+- **Real-time Fraud Prediction**: Integrates multiple machine learning models (Logistic Regression, TensorFlow, LLaMA-based analysis) to assess transaction legitimacy.
+- **Asynchronous Fraud Processing**: Transactions are initially stored temporarily, and fraud prediction runs in the background, updating the transaction status once completed.
+- **Scalable Backend**: Utilizes Convex.dev for a reactive, serverless database and function platform, simplifying data synchronization and state management.
+- **Dockerized Deployment**: Both the Python ML API and the TypeScript server are containerized for consistent and isolated deployment.
+- **API Gateway/Orchestration**: The TypeScript Express server acts as an orchestrator, handling incoming requests, interacting with Convex, and delegating fraud prediction to the Python FastAPI service.
+- **Comprehensive Error Handling & Rate Limiting**: Implements robust error handling and API rate limiting for security and stability.
 
-## 🚀 Tech Stack
+## 🚀 Architecture
 
-- **Language**: TypeScript
-- **Runtime**: Node.js
-- **Framework**: [Framework details to be determined from codebase]
+The project follows a microservices-inspired architecture:
 
-## 📦 Installation
+1.  **TypeScript Express.js Server (Frontend-facing API)**:
+    *   Handles all incoming HTTP requests for user and transaction management.
+    *   Acts as an API gateway, routing requests to appropriate Convex.dev functions.
+    *   Orchestrates the fraud detection workflow:
+        *   Stores initial transaction data temporarily in Convex.
+        *   Calls the Python FastAPI service for fraud prediction.
+        *   Updates the transaction in Convex with fraud analysis results.
+    *   Implements CORS, rate limiting, and centralized error handling.
+    *   Deployed as a Node.js application.
 
-```bash
-# Clone the repository
-git clone https://github.com/WomB0ComB0/hackmit-2024-api.git
+2.  **Python FastAPI Service (ML-driven Fraud Prediction)**:
+    *   Exposes a `/api/v1/predict_fraud` endpoint.
+    *   Integrates three fraud detection mechanisms:
+        *   **Logistic Regression**: A traditional statistical model for baseline prediction.
+        *   **TensorFlow Model**: A neural network for more complex pattern recognition.
+        *   **LLaMA Integration**: Leverages `transformers` library (using a GPT-2 model as a placeholder for LLaMA, demonstrating the capability) for natural language understanding of transaction details to provide explanations.
+    *   The models are trained using mock data (e.g., `X_train.csv`, `y_train.csv`).
+    *   Deployed as a Python FastAPI application, containerized with Docker.
 
-# Navigate to the project directory
-cd hackmit-2024-api
+3.  **Convex.dev (Backend as a Service)**:
+    *   Provides a reactive, serverless database for `users`, `transactions`, and `tempTransactions`.
+    *   Hosts server-side functions (mutations and queries) for data operations.
+    *   Enables real-time data updates and synchronization.
 
-# Install dependencies
-npm install
-```
-
-## 🏃‍♂️ Running the Application
-
-```bash
-# Development mode
-npm run dev
-
-# Production mode
-npm start
-```
-
-## 🔧 Development
-
-This API was developed as part of the HackMIT 2024 hackathon. The project includes:
-
-- RESTful API endpoints
-- Server configuration
-- TypeScript implementation for type safety
-
-## 📈 Project Status
-
-- **Created**: June 7, 2025
-- **Last Updated**: 32 days ago
-- **Language**: TypeScript
-- **Stars**: 1
-- **Forks**: 0
-
-## 🤝 Contributing
-
-This is a hackathon project fork. Feel free to explore the code and suggest improvements!
-
-## 📄 License
-
-License information not specified. Please check with the original repository or contact the maintainer.
-
-## 🔗 Original Project
-
-This repository is forked from [ZachMckay47/hackmit-2024-api](https://github.com/ZachMckay47/hackmit-2024-api).
+```mermaid
+graph TD
+    A[Client Application] -->|HTTP Requests| B(TypeScript Express Server)
+    B -->|User/Transaction Mutations/Queries| C(Convex.dev BaaS)
+    B -->|Fraud Prediction Request| D(Python FastAPI ML Service)
+    D -->|Prediction Results| B
+    C -->|Store/Retrieve Data| E[Database (Convex)]
+    D -->|Load/Train Models| F[ML Models (Logistic Regression, TensorFlow, LLaMA)]
+    subgraph TypeScript Express Server
+        B
+    end
+    subgraph Python FastAPI ML Service
+        D
+        F
+    end
+    subgraph Convex.dev
+        C
+        E
+    end
