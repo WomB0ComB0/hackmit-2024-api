@@ -47,23 +47,26 @@ The project follows a microservices-inspired architecture:
 
 ```mermaid
 graph TD
-    A[Client Application] -->|HTTP Requests| B(TypeScript Express Server)
-    B -->|User/Transaction Mutations/Queries| C(Convex.dev BaaS)
-    B -->|Fraud Prediction Request| D(Python FastAPI ML Service)
-    D -->|Prediction Results| B
-    C -->|Store/Retrieve Data| E[Database (Convex)]
-    D -->|Load/Train Models| F[ML Models (Logistic Regression, TensorFlow, LLaMA)]
-    subgraph TypeScript Express Server
-        B
-    end
-    subgraph Python FastAPI ML Service
-        D
-        F
-    end
-    subgraph Convex.dev
-        C
-        E
-    end
+  A[Client Application] -->|HTTP requests| B[TypeScript Express Server]
+  B -->|Mutations & queries| C[Convex BaaS]
+  B -->|Fraud prediction| D[Python FastAPI ML Service]
+  D -->|Prediction results| B
+  C -->|Store & retrieve data| E[(Convex Database)]
+  D -->|Load & train models| F[(ML Models)]
+
+  subgraph TypeScript_Express_Server
+    B
+  end
+
+  subgraph Python_FastAPI_ML_Service
+    D
+    F
+  end
+
+  subgraph Convex
+    C
+    E
+  end
 ```
 **Architectural Diagram**: 
 
