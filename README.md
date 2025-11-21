@@ -129,36 +129,41 @@ This diagram illustrates the main services and their interactions:
 graph TD
   A[Client Application] -->|HTTP/HTTPS requests| B[TypeScript Express Server]
   B -->|Mutations & Queries| C[Convex BaaS]
-  B -->|API Calls (Fraud Prediction)| D[Python FastAPI ML Service]
+  B -->|Fraud prediction API calls| D[Python FastAPI ML Service]
   D -->|Prediction Results| B
   C -->|Store & Retrieve Data| E[(Convex Database)]
   D -->|Load & Train Models| F[(ML Models & Data)]
 
   subgraph TypeScript_Express_Server
-    B
     direction LR
+    B
     B1[API Routing]
     B2[Orchestration]
     B3[Error Handling]
-    B --> B1 & B2 & B3
+    B --> B1
+    B --> B2
+    B --> B3
   end
 
   subgraph Python_FastAPI_ML_Service
-    D
     direction LR
+    D
     D1[ML Endpoints]
     D2[Model Loading]
     D3[Prediction Logic]
-    D --> D1 & D2 & D3
+    D --> D1
+    D --> D2
+    D --> D3
     F
   end
 
   subgraph Convex_Backend_as_a_Service
-    C
     direction LR
+    C
     C1[Serverless Functions]
     C2[Real-time Database]
-    C --> C1 & C2
+    C --> C1
+    C --> C2
     E
   end
 
